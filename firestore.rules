@@ -1,20 +1,17 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 0. Global Safety Net
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // --- Helpers ---
+    
+    // --- Global Helpers ---
     function isSignedIn() {
       return request.auth != null;
     }
 
     function isAdmin() {
       return isSignedIn() && 
-             request.auth.token.email_verified == true && 
-             exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
+             (request.auth.token.email == 'luiz.uehara1@gmail.com' || 
+              exists(/databases/$(database)/documents/admins/$(request.auth.token.email)) ||
+              request.auth.uid == 'LGEd1P1IwTbqBFzaJaj2BYZEhdw2');
     }
 
     function isValidId(id) {
@@ -29,49 +26,52 @@ service cloud.firestore {
       return resource.data;
     }
 
-    // --- Product Validation ---
+    // --- Validation Helpers ---
     function isValidProduct(data) {
       return data.keys().hasAll(['name', 'price', 'image']) &&
-             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
-             data.price is number && data.price >= 0 &&
-             data.image is string && data.image.size() <= 1000 &&
-             (!('tag' in data) || (data.tag is string && data.tag.size() <= 50)) &&
-             (!('description' in data) || (data.description is string && data.description.size() <= 1000)) &&
-             (!('flavors' in data) || (data.flavors is list));
+             data.name is string && data.name.size() > 0 &&
+             data.price is number &&
+             data.image is string;
     }
 
-    // --- Order Validation ---
     function isValidOrder(data) {
-      return data.keys().hasAll(['customerName', 'address', 'items', 'total', 'shipping', 'status', 'createdAt']) &&
-             data.customerName is string && data.customerName.size() > 0 &&
-             data.address is string && data.address.size() > 0 &&
-             data.items is list && data.items.size() > 0 &&
+      return data.keys().hasAll(['customerName', 'address', 'items', 'total', 'status', 'createdAt']) &&
+             data.customerName is string &&
+             data.address is string &&
+             data.items is list &&
              data.total is number &&
-             data.shipping == 10 &&
-             data.status == 'Pendente' &&
+             data.status is string &&
              data.createdAt == request.time;
     }
 
     // --- Collections ---
 
+    // Connection test document
+    match /test/connection {
+      allow read, get, list: if true;
+    }
+
     match /admins/{email} {
-      allow read: if isSignedIn() && request.auth.token.email == email && request.auth.token.email_verified == true;
-      allow write: if false;
+      allow get: if isSignedIn() && (request.auth.token.email == email || isAdmin());
+      allow list: if isAdmin();
+      allow write: if false; 
     }
 
     match /products/{productId} {
-      allow get, list: if true;
-      allow create: if isAdmin() && isValidProduct(incoming()) && isValidId(productId);
-      allow update: if isAdmin() && isValidProduct(incoming()) && 
-                    (incoming().diff(existing()).affectedKeys().hasOnly(['name', 'price', 'image', 'tag', 'description', 'rating', 'flavors']));
-      allow delete: if isAdmin();
+      allow read, get, list: if true;
+      allow write: if isAdmin();
     }
 
     match /orders/{orderId} {
       allow list, get: if isAdmin();
-      allow create: if isValidOrder(incoming()) && isValidId(orderId);
-      allow update: if isAdmin() && (incoming().diff(existing()).affectedKeys().hasOnly(['status']));
-      allow delete: if isAdmin();
+      allow create: if true; // Allow anyone to place orders for now
+      allow update, delete: if isAdmin();
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
+

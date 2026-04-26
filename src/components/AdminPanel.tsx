@@ -14,7 +14,7 @@ import {
   Package
 } from 'lucide-react';
 import { auth, loginWithGoogle, logout } from '../lib/firebase';
-import { addProduct, getProducts, deleteProduct, isAdminUser } from '../services/storeService';
+import { addProduct, subscribeProducts, deleteProduct, isAdminUser } from '../services/storeService';
 import { onAuthStateChanged } from 'firebase/auth';
 
 export default function AdminPanel({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
@@ -47,24 +47,32 @@ export default function AdminPanel({ isOpen, onClose }: { isOpen: boolean, onClo
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
+    let unsubscribeProducts: () => void;
+    
+    const unsubscribeAuth = onAuthStateChanged(auth, async (u) => {
       setUser(u);
       if (u && u.email) {
         const adminStatus = await isAdminUser(u.email);
         setIsAdmin(adminStatus);
-        if (adminStatus) loadProducts();
+        if (adminStatus) {
+          unsubscribeProducts = subscribeProducts((data) => {
+            setProducts(data || []);
+            setLoading(false);
+          });
+        } else {
+          setLoading(false);
+        }
       } else {
         setIsAdmin(false);
+        setLoading(false);
       }
-      setLoading(false);
     });
-    return unsubscribe;
-  }, []);
 
-  async function loadProducts() {
-    const data = await getProducts();
-    setProducts(data || []);
-  }
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeProducts) unsubscribeProducts();
+    };
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -76,10 +84,15 @@ export default function AdminPanel({ isOpen, onClose }: { isOpen: boolean, onClo
         rating: 5
       });
       setFormData({ name: '', price: '', image: '', tag: '', description: '', flavors: [] });
-      loadProducts();
       alert("Produto adicionado com sucesso!");
-    } catch (err) {
-      alert("Erro ao adicionar produto.");
+    } catch (err: any) {
+      console.error("Erro ao adicionar produto:", err);
+      try {
+        const errorData = JSON.parse(err.message);
+        alert(`Erro ao adicionar: ${errorData.error}`);
+      } catch {
+        alert("Erro ao adicionar produto. Verifique sua conexão ou permissões.");
+      }
     } finally {
       setIsAdding(false);
     }
@@ -89,8 +102,8 @@ export default function AdminPanel({ isOpen, onClose }: { isOpen: boolean, onClo
     if (confirm("Deseja realmente excluir este produto?")) {
       try {
         await deleteProduct(id);
-        loadProducts();
-      } catch (err) {
+      } catch (err: any) {
+        console.error("Erro ao excluir produto:", err);
         alert("Erro ao excluir.");
       }
     }

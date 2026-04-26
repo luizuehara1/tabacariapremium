@@ -1,26 +1,26 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { initializeFirestore, doc, getDocFromServer } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+import { initializeApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+import { initializeFirestore, doc, getDocFromServer } from "firebase/firestore";
+import firebaseConfig from "../../firebase-applet-config.json";
 
 const app = initializeApp(firebaseConfig);
+
+// 🔥 CORREÇÃO DO ERRO OFFLINE
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
-}, firebaseConfig.firestoreDatabaseId);
+});
+
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
 export async function testConnection() {
+  console.log("Iniciando diagnóstico Firestore...");
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
+    const testDoc = doc(db, "test", "connection");
+    await getDocFromServer(testDoc);
+    console.log("✅ Conexão com Firestore estabelecida.");
   } catch (error) {
-    if (error instanceof Error) {
-      if (error.message.includes('the client is offline')) {
-        console.error("Firebase Offline: Verifique se você criou o banco de dados Firestore no console do Firebase e se as chaves estão corretas.");
-      } else {
-        console.warn("Firestore Diagnostic (esperado se documento não existir):", error.message);
-      }
-    }
+    console.error("❌ Erro no teste de conexão Firestore:", error);
   }
 }
 

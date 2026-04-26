@@ -1,7 +1,8 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingCart, Star, X, Truck, Loader2, Package } from 'lucide-react';
+import { ShoppingCart, Star, X, Truck, Loader2, Package, CheckCircle2 } from 'lucide-react';
 import { useState, useEffect, type FormEvent } from 'react';
-import { getProducts, createOrder } from '../services/storeService';
+import { getProducts, createOrder, subscribeProducts } from '../services/storeService';
+import PixCheckout from './PixCheckout';
 
 export default function Products() {
   const [products, setProducts] = useState<any[]>([]);
@@ -11,6 +12,7 @@ export default function Products() {
   const [quantity, setQuantity] = useState(1);
   const [selectedFlavors, setSelectedFlavors] = useState<string[]>(['']);
   const [buying, setBuying] = useState(false);
+  const [showPix, setShowPix] = useState(false);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
 
   useEffect(() => {
@@ -39,20 +41,13 @@ export default function Products() {
   };
 
   useEffect(() => {
-    loadProducts();
-  }, []);
-
-  async function loadProducts() {
     setLoading(true);
-    try {
-      const data = await getProducts();
+    const unsubscribe = subscribeProducts((data) => {
       setProducts(data || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
       setLoading(false);
-    }
-  }
+    });
+    return () => unsubscribe();
+  }, []);
 
   async function handlePurchase(e: FormEvent) {
     e.preventDefault();
@@ -78,18 +73,20 @@ export default function Products() {
         }],
         total: (selectedProduct.price * quantity) + 10
       });
-      setPurchaseSuccess(true);
-      setTimeout(() => {
-        setPurchaseSuccess(false);
-        setSelectedProduct(null);
-        setAddress('');
-      }, 3000);
+      setShowPix(true);
     } catch (err) {
       alert("Erro ao processar pedido. Verifique os dados.");
     } finally {
       setBuying(false);
     }
   }
+
+  const closeModals = () => {
+    setSelectedProduct(null);
+    setShowPix(false);
+    setPurchaseSuccess(false);
+    setAddress('');
+  };
 
   return (
     <section id="produtos" className="py-32 bg-brand-black relative overflow-hidden">
@@ -140,7 +137,7 @@ export default function Products() {
             <span className="text-white/20 tracking-widest uppercase font-bold text-xs">Sincronizando Inventário...</span>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {products.length === 0 && (
               <div className="col-span-full text-center py-32 glass-card rounded-[48px] border-dashed border-white/10">
                 <Package size={48} className="mx-auto mb-6 text-white/10" />
@@ -185,8 +182,8 @@ export default function Products() {
                     </div>
                   </div>
 
-                  <div className="p-8">
-                    <div className="flex items-center justify-between mb-4">
+                  <div className="p-8 text-center">
+                    <div className="flex items-center justify-center mb-4">
                       <div className="flex items-center gap-1">
                         {[...Array(5)].map((_, i) => (
                           <Star 
@@ -203,7 +200,7 @@ export default function Products() {
                       {product.name}
                     </h3>
                     
-                    <div className="flex items-baseline gap-2">
+                    <div className="flex items-baseline justify-center gap-2">
                       <span className="text-xs text-white/30 font-bold uppercase">R$</span>
                       <span className="text-3xl font-black tracking-tight">{product.price.toFixed(2)}</span>
                     </div>
@@ -223,27 +220,35 @@ export default function Products() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setSelectedProduct(null)}
+              onClick={closeModals}
               className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             />
             <motion.div 
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative bg-brand-dark border border-white/10 w-full max-w-lg rounded-[32px] overflow-hidden shadow-2xl"
+              className={`relative bg-brand-dark border border-white/10 w-full ${showPix ? 'max-w-md' : 'max-w-lg'} rounded-[32px] overflow-hidden shadow-2xl flex flex-col`}
             >
-              <div className="p-8">
-                <button 
-                  onClick={() => setSelectedProduct(null)}
-                  className="absolute top-6 right-6 text-white/50 hover:text-white"
-                >
-                  <X />
-                </button>
+              <div className={showPix ? "" : "p-8"}>
+                {!showPix && (
+                  <button 
+                    onClick={closeModals}
+                    className="absolute top-6 right-6 text-white/50 hover:text-white z-20"
+                  >
+                    <X />
+                  </button>
+                )}
 
-                {purchaseSuccess ? (
+                {showPix ? (
+                  <PixCheckout 
+                    total={(selectedProduct.price * quantity) + 10}
+                    customerName="Cliente Visita"
+                    onClose={closeModals}
+                  />
+                ) : purchaseSuccess ? (
                   <div className="text-center py-10">
                     <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <ShoppingCart className="text-white w-10 h-10" />
+                      <CheckCircle2 className="text-white w-10 h-10" />
                     </div>
                     <h3 className="text-2xl font-bold mb-2">Pedido Realizado!</h3>
                     <p className="text-white/50">Seu pedido foi registrado. Entraremos em contato.</p>

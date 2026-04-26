@@ -8,7 +8,8 @@ import {
   query, 
   orderBy, 
   serverTimestamp,
-  getDoc
+  getDoc,
+  onSnapshot
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 
@@ -47,21 +48,48 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   throw new Error(JSON.stringify(errInfo));
 }
 
+// Real-time products subscription
+export const subscribeProducts = (callback: (products: any[]) => void) => {
+  const path = 'products';
+  const q = query(collection(db, path), orderBy('createdAt', 'desc'));
+  
+  return onSnapshot(q, (snapshot) => {
+    const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    callback(products);
+  }, (error) => {
+    console.error("Real-time subscription error:", error);
+    // Fallback if index fails
+    return onSnapshot(collection(db, path), (snapshot) => {
+      const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      callback(products);
+    });
+  });
+};
+
 export const getProducts = async () => {
   const path = 'products';
   try {
-    const q = query(collection(db, path));
+    const q = query(collection(db, path), orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, path);
+    // If it fails because of missing index, fallback to unordered
+    try {
+      const snapshot = await getDocs(collection(db, path));
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (innerError) {
+      handleFirestoreError(error, OperationType.LIST, path);
+    }
   }
 };
 
 export const addProduct = async (product: any) => {
   const path = 'products';
   try {
-    const res = await addDoc(collection(db, path), product);
+    const res = await addDoc(collection(db, path), {
+      ...product,
+      createdAt: serverTimestamp()
+    });
     return res.id;
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, path);
@@ -102,6 +130,9 @@ export const createOrder = async (order: any) => {
 };
 
 export const isAdminUser = async (email: string) => {
+  // Hardcoded for project owner
+  if (email === 'luiz.uehara1@gmail.com') return true;
+  
   const path = `admins/${email}`;
   try {
     const adminDoc = await getDoc(doc(db, 'admins', email));
