@@ -25,7 +25,9 @@ import {
   Truck,
   Clock,
   Pencil,
-  RotateCcw
+  RotateCcw,
+  CreditCard,
+  QrCode
 } from 'lucide-react';
 import { auth, loginWithGoogle, logout } from '../lib/firebase';
 import { 
@@ -700,7 +702,7 @@ export default function AdminPanel({ isOpen, onClose }: { isOpen: boolean, onClo
                                   return (
                                     <div key={order.id} className="bg-white/5 border border-white/5 rounded-[32px] p-5 sm:p-6 hover:border-white/10 transition-all">
                                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex flex-wrap items-center gap-3">
                                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                                             isPendente ? 'bg-amber-500/10 text-amber-500' : 
                                             isAceito ? 'bg-brand-accent/10 text-brand-accent' : 
@@ -711,6 +713,16 @@ export default function AdminPanel({ isOpen, onClose }: { isOpen: boolean, onClo
                                           <div className="min-w-0">
                                             <div className="text-[10px] text-white/30 uppercase font-black tracking-widest truncate">Pedido #{order.id.slice(-6)}</div>
                                             <div className="text-xs text-white/60 font-bold">{date.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</div>
+                                          </div>
+                                          
+                                          {/* Payment Method Tag */}
+                                          <div className={`px-3 py-1 rounded-full flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${
+                                            (order as any).paymentMethod === 'pix' 
+                                            ? 'bg-blue-500/10 text-blue-400 border border-blue-500/10' 
+                                            : 'bg-brand-accent/10 text-brand-accent border border-brand-accent/10'
+                                          }`}>
+                                            {(order as any).paymentMethod === 'pix' ? <QrCode size={12} /> : <CreditCard size={12} />}
+                                            {(order as any).paymentMethod === 'pix' ? 'Pix Direto' : 'Mercado Pago'}
                                           </div>
                                         </div>
                                         <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -724,7 +736,7 @@ export default function AdminPanel({ isOpen, onClose }: { isOpen: boolean, onClo
                                                 : 'bg-green-500 text-white hover:scale-105 active:scale-95'
                                               }`}
                                             >
-                                              {isPendente ? 'Aceitar' : 'Finalizar'}
+                                              {isPendente ? 'Confirmar Pagamento' : 'Finalizar Entrega'}
                                             </button>
                                           )}
                                           <button 

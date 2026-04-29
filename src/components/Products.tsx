@@ -164,6 +164,7 @@ export default function Products() {
       await createOrder({
         customerName: "Cliente Visita",
         address: address,
+        paymentMethod: paymentMethod,
         items: [{ 
           id: selectedProduct.id, 
           name: typeof selectedProduct.name === 'string' ? selectedProduct.name : "Produto", 

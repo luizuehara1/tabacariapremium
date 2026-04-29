@@ -4,9 +4,18 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 import dotenv from 'dotenv';
+import admin from 'firebase-admin';
 
 dotenv.config();
 
+// Initialize Firebase Admin
+if (!admin.apps.length) {
+  admin.initializeApp({
+    projectId: 'tabacaria68'
+  });
+}
+
+const db = admin.firestore();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -56,6 +65,7 @@ async function startServer() {
   });
 
   app.post("/api/mercadopago-webhook", async (req, res) => {
+    console.log("Webhook recebido:", req.body);
     const { body, query } = req;
     
     // Mercado Pago provides the type of notification
@@ -88,8 +98,19 @@ async function startServer() {
 
         if (status === 'approved') {
           console.log(`✅ SUCCESS: Payment approved for order ${externalReference}`);
-          // HERE: Add your logic to update Firestore status
-          // Example: await updateDoc(doc(db, 'orders', externalReference), { status: 'Pago' });
+          
+          if (externalReference) {
+            try {
+              await db.collection('orders').doc(externalReference).update({
+                status: 'Aceito',
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                payment_id: paymentId
+              });
+              console.log(`Order ${externalReference} marked as PAID (Aceito)`);
+            } catch (fsError) {
+              console.error(`Error updating order ${externalReference} in Firestore:`, fsError);
+            }
+          }
         }
       } catch (error) {
         console.error('Error processing MP notification:', error);
