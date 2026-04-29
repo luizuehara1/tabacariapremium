@@ -30,10 +30,15 @@ export default function App() {
       </main>
       
       <footer className="py-12 border-t border-white/5 text-center text-white/30 text-sm">
-        <div className="mb-6">
-          <span className="text-white font-bold tracking-tighter uppercase mr-4">Vapor<span className="text-brand-accent">Premium</span></span>
+        <div className="mb-6 flex items-center justify-center gap-3">
+          <img 
+            src="https://i.postimg.cc/MpvX4Nyx/Chat-GPT-Image-28-de-abr-de-2026-22-38-06.png" 
+            alt="Logo" 
+            className="w-10 h-10 rounded-xl object-cover border border-white/10"
+          />
+          <span className="text-white font-bold tracking-tighter uppercase">Vapor<span className="text-brand-accent">Street</span></span>
         </div>
-        <p>&copy; {new Date().getFullYear()} Vapor Premium. Todos os direitos reservados.</p>
+        <p>&copy; {new Date().getFullYear()} Vapor Street. Todos os direitos reservados.</p>
         <p className="mt-2">O consumo de nicotina pode causar dependência. Venda proibida para menores de 18 anos.</p>
       </footer>
 

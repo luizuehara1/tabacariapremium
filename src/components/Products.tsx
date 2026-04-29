@@ -4,6 +4,103 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { getProducts, createOrder, subscribeProducts } from '../services/storeService';
 import PixCheckout from './PixCheckout';
 
+interface ProductImageProps {
+  src: string;
+  alt: string;
+  className?: string;
+}
+
+function ProductImage({ src, alt, className, imgClassName }: ProductImageProps & { imgClassName?: string }) {
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  return (
+    <div className={`relative overflow-hidden ${className}`}>
+      {!isLoaded && (
+        <div className="absolute inset-0 bg-white/5 animate-pulse flex items-center justify-center">
+          <Loader2 className="w-6 h-6 text-white/10 animate-spin" />
+        </div>
+      )}
+      {src ? (
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onLoad={() => setIsLoaded(true)}
+          className={`w-full h-full object-cover transition-all duration-700 ${
+            isLoaded ? 'opacity-100' : 'opacity-0'
+          } ${imgClassName || ''}`}
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-white/5">
+          <Package className="text-white/10" size={32} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ImageCarousel({ images, alt, className, imgClassName }: { images: string[], alt: string, className?: string, imgClassName?: string }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % images.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [images]);
+
+  if (!images || images.length === 0) return null;
+
+  return (
+    <div className={`relative overflow-hidden ${className}`}>
+      {!isLoaded && (
+        <div className="absolute inset-0 bg-white/5 animate-pulse flex items-center justify-center">
+          <Loader2 className="w-6 h-6 text-white/10 animate-spin" />
+        </div>
+      )}
+      <AnimatePresence mode="wait">
+        {images[currentIndex] ? (
+          <motion.img
+            key={currentIndex}
+            src={images[currentIndex]}
+            alt={`${alt} ${currentIndex + 1}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8 }}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            onLoad={() => setIsLoaded(true)}
+            className={`w-full h-full object-cover transition-all ${
+              isLoaded ? 'opacity-100' : 'opacity-0'
+            } ${imgClassName || ''}`}
+          />
+        ) : (
+          <div key="empty" className="w-full h-full flex items-center justify-center bg-white/5">
+            <Package className="text-white/10" size={32} />
+          </div>
+        )}
+      </AnimatePresence>
+      
+      {images.length > 1 && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+          {images.map((_, i) => (
+            <div 
+              key={i} 
+              className={`h-1 rounded-full transition-all duration-500 ${
+                i === currentIndex ? 'w-4 bg-brand-accent' : 'w-1 bg-white/20'
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Products() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -155,11 +252,11 @@ export default function Products() {
               >
                 <div className="glass-card rounded-[32px] overflow-hidden transition-all duration-500 group-hover:bg-brand-card/60 group-hover:translate-y-[-8px] group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
                   <div className="relative aspect-[4/5] overflow-hidden">
-                    <img 
-                      src={product.image} 
+                    <ImageCarousel 
+                      images={product.images?.length > 0 ? product.images : [product.image]} 
                       alt={product.name} 
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover transition-transform duration-[1.5s] group-hover:scale-110 brightness-[0.8] group-hover:brightness-100"
+                      className="w-full h-full"
+                      imgClassName="group-hover:scale-110 brightness-[0.8] group-hover:brightness-100 transition-transform duration-[1.5s]"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     
@@ -257,7 +354,11 @@ export default function Products() {
                   <>
                     <h3 className="text-2xl font-bold mb-6">Finalizar Compra</h3>
                     <div className="flex gap-4 mb-8 p-4 bg-white/5 rounded-2xl">
-                      <img src={selectedProduct.image} referrerPolicy="no-referrer" className="w-20 h-20 object-cover rounded-xl" />
+                      <ImageCarousel 
+                        images={selectedProduct.images?.length > 0 ? selectedProduct.images : [selectedProduct.image]} 
+                        alt={selectedProduct.name} 
+                        className="w-20 h-20 rounded-xl" 
+                      />
                       <div>
                         <div className="font-bold">{selectedProduct.name}</div>
                         <div className="text-brand-accent font-extrabold text-lg">R$ {selectedProduct.price.toFixed(2)}</div>

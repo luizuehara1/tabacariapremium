@@ -1,9 +1,32 @@
-import { motion } from 'motion/react';
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, useScroll, useTransform } from 'motion/react';
 import { ArrowRight, ChevronRight, Star } from 'lucide-react';
+import { subscribeProducts } from '../services/storeService';
 
 export default function Hero() {
+  const [highlightProduct, setHighlightProduct] = useState<any>(null);
+  const containerRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end start"]
+  });
+
+  const y = useTransform(scrollYProgress, [0, 1], [0, 150]);
+  const opacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeProducts((products) => {
+      const highlighted = products.find(p => p.isHighlight);
+      if (highlighted) {
+        setHighlightProduct(highlighted);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   return (
-    <section id="home" className="relative pt-32 pb-20 lg:pt-56 lg:pb-40 overflow-hidden bg-brand-black">
+    <section id="home" ref={containerRef} className="relative pt-32 pb-20 lg:pt-56 lg:pb-40 overflow-hidden bg-brand-black">
       {/* Background Gradients */}
       <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-brand-accent/10 rounded-full blur-[160px] -translate-y-1/2 translate-x-1/2 select-none pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-brand-neon/5 rounded-full blur-[140px] translate-y-1/2 -translate-x-1/2 select-none pointer-events-none" />
@@ -26,7 +49,7 @@ export default function Hero() {
               </div>
               
               <h1 className="text-6xl lg:text-[8rem] font-black tracking-[-0.04em] leading-[0.9] mb-10 text-gradient">
-                HIGH<br/>VAPOR<br/><span className="accent-gradient">STUDIO</span>
+                HIGH<br/>VAPOR<br/><span className="accent-gradient">STREET</span>
               </h1>
               
               <p className="text-xl lg:text-2xl text-white/40 mb-12 max-w-xl mx-auto lg:mx-0 leading-relaxed font-light">
@@ -77,34 +100,64 @@ export default function Hero() {
             >
               <div className="absolute inset-x-0 inset-y-0 bg-gradient-to-tr from-brand-accent/20 to-brand-neon/20 rounded-[64px] blur-3xl -z-10 animate-pulse-slow" />
               
-              <div className="relative h-full w-full rounded-[48px] overflow-hidden border border-white/10 glass-card">
-                <img 
-                  src="https://images.unsplash.com/photo-1620331311520-246422ff82f9?auto=format&fit=crop&q=90&w=1200" 
-                  alt="Elite Vaping Experience" 
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover scale-105 hover:scale-100 transition-transform duration-[2s] brightness-[0.8] hover:brightness-[0.9]"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-brand-black via-transparent to-transparent opacity-80" />
+              <motion.div
+                style={{ y, opacity }}
+                className="relative h-full w-full rounded-[48px] overflow-hidden border border-white/5 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)]"
+              >
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={highlightProduct?.id || 'static'}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="absolute inset-0"
+                  >
+                    <img 
+                      src={(highlightProduct?.image && highlightProduct.image !== "") ? highlightProduct.image : "https://images.unsplash.com/photo-1620331311520-246422ff82f9?auto=format&fit=crop&q=90&w=1200"} 
+                      alt={highlightProduct?.name || "Elite Vaping Experience"} 
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover scale-110 hover:scale-105 transition-transform duration-[3s] brightness-[0.75] hover:brightness-[0.85]"
+                    />
+                  </motion.div>
+                </AnimatePresence>
+
+                <div className="absolute inset-0 bg-gradient-to-t from-brand-black/60 via-transparent to-transparent opacity-60" />
                 
-                <div className="absolute bottom-10 left-10 right-10">
-                  <div className="glass-card p-6 rounded-3xl border-white/20 backdrop-blur-3xl animate-float">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="px-3 py-1 bg-brand-accent/20 border border-brand-accent/30 rounded-full text-[10px] font-black uppercase tracking-widest text-brand-accent">
-                        Destaque do Mês
+                {highlightProduct && (
+                  <div className="absolute bottom-10 left-10 right-10 z-30">
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-4 bg-brand-black/40 backdrop-blur-xl rounded-[32px] border border-white/10"
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-1 h-3 bg-brand-accent rounded-full" />
+                        <div className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-accent">
+                          Destaque do Mês
+                        </div>
                       </div>
-                      <div className="flex gap-0.5">
-                        <Star className="w-3 h-3 fill-brand-accent text-brand-accent" />
-                        <Star className="w-3 h-3 fill-brand-accent text-brand-accent" />
-                        <Star className="w-3 h-3 fill-brand-accent text-brand-accent" />
-                        <Star className="w-3 h-3 fill-brand-accent text-brand-accent" />
-                        <Star className="w-3 h-3 fill-brand-accent text-brand-accent" />
+                      <div className="flex items-end justify-between gap-4">
+                        <div>
+                          <div className="text-2xl font-black mb-1 drop-shadow-2xl">{highlightProduct.name}</div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex">
+                              {[1,2,3,4,5].map(s => <Star key={s} size={10} className="fill-brand-accent text-brand-accent" />)}
+                            </div>
+                            <span className="text-[10px] text-white/40 uppercase font-black tracking-widest">Premium Choice</span>
+                          </div>
+                        </div>
+                        <div className="text-xl font-black text-brand-neon">
+                          R$ {highlightProduct.price.toFixed(2)}
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-xl font-bold mb-1">Ignite V50 Premium</div>
-                    <div className="text-white/40 text-sm">Experience the ultimate flow</div>
+                    </motion.div>
                   </div>
-                </div>
-              </div>
+                )}
+
+                {/* Subtle light effect */}
+                <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-brand-accent/10 to-transparent pointer-events-none" />
+              </motion.div>
               
               {/* Abstract decorative rings */}
               <div className="absolute -top-12 -right-12 w-48 h-48 border border-white/5 rounded-full animate-pulse-slow" />

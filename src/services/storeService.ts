@@ -129,6 +129,54 @@ export const createOrder = async (order: any) => {
   }
 };
 
+export const getOrders = async () => {
+  const path = 'orders';
+  try {
+    const q = query(collection(db, path), orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    try {
+      const snapshot = await getDocs(collection(db, path));
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (innerError) {
+      handleFirestoreError(error, OperationType.LIST, path);
+    }
+  }
+};
+
+export const subscribeOrders = (callback: (orders: any[]) => void) => {
+  const path = 'orders';
+  const q = query(collection(db, path), orderBy('createdAt', 'desc'));
+  
+  return onSnapshot(q, (snapshot) => {
+    callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+  }, (error) => {
+    // If it fails because of missing index, fallback to unordered
+    return onSnapshot(collection(db, path), (snapshot) => {
+      callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+  });
+};
+
+export const updateOrder = async (orderId: string, data: any) => {
+  const path = `orders/${orderId}`;
+  try {
+    await updateDoc(doc(db, 'orders', orderId), data);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+};
+
+export const deleteOrder = async (orderId: string) => {
+  const path = `orders/${orderId}`;
+  try {
+    await deleteDoc(doc(db, 'orders', orderId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+};
+
 export const isAdminUser = async (email: string) => {
   // Hardcoded for project owner
   if (email === 'luiz.uehara1@gmail.com') return true;

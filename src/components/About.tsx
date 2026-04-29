@@ -14,10 +14,10 @@ export default function About() {
             >
               <div className="absolute -top-6 -left-6 w-24 h-24 bg-brand-accent/20 blur-xl rounded-full" />
               <img 
-                src="https://images.unsplash.com/photo-1620331320306-696615b1397b?auto=format&fit=crop&q=80&w=800" 
-                alt="Our shop atmosphere" 
+                src="https://i.postimg.cc/MpvX4Nyx/Chat-GPT-Image-28-de-abr-de-2026-22-38-06.png" 
+                alt="Vapor Street Main" 
                 referrerPolicy="no-referrer"
-                className="rounded-[32px] border border-white/10 shadow-2xl relative z-10"
+                className="rounded-[32px] border border-white/10 shadow-2xl relative z-10 w-full object-cover aspect-square sm:aspect-video lg:aspect-square"
               />
             </motion.div>
           </div>
@@ -36,7 +36,7 @@ export default function About() {
                 Nascemos da paixão por proporcionar momentos de descontração com o que há de mais moderno no mundo do vaping. Nossa curadoria é rigorosa: só oferecemos o que nós mesmos usaríamos.
               </p>
               <p className="text-white/60 mb-10 text-lg leading-relaxed">
-                Trabalhamos com marcas líderes que garantem segurança e sabor inigualável. Na Vapor Premium, seu estilo é nossa prioridade.
+                Trabalhamos com marcas líderes que garantem segurança e sabor inigualável. Na Vapor Street, seu estilo é nossa prioridade.
               </p>
               
               <div className="grid grid-cols-2 gap-8 py-8 border-t border-white/5">

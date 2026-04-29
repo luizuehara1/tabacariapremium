@@ -1,4 +1,4 @@
-# Security Specification - Vapor Premium
+# Security Specification - Vapor Street
 
 ## 1. Data Invariants
 - Products can only be created/updated/deleted by Admins.

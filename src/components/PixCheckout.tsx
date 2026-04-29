@@ -21,7 +21,7 @@ export default function PixCheckout({ total, customerName, onClose }: PixCheckou
     return () => clearTimeout(timer);
   }, []);
 
-  const pixPayload = `00020101021226820014br.gov.bcb.pix0120${PIX_KEY}520400005303986540${total.toFixed(2)}5802BR5913Vapor Premium6009Sao Paulo62070503***6304`;
+  const pixPayload = `00020101021226820014br.gov.bcb.pix0120${PIX_KEY}520400005303986540${total.toFixed(2)}5802BR5912Vapor Street6009Sao Paulo62070503***6304`;
   // Note: This is a simplified PIX payload for display purposes. 
   // In a real production environment, you'd use a dedicated library or API to generate a valid static/dynamic EMV PIX payload.
   // For this frontend-only demo, we'll use a string that looks like a PIX payload.
