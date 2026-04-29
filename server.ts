@@ -5,8 +5,11 @@ import { fileURLToPath } from "url";
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 import dotenv from 'dotenv';
 import admin from 'firebase-admin';
+import { Resend } from 'resend';
 
 dotenv.config();
+
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {
@@ -80,8 +83,8 @@ async function startServer() {
           external_reference: orderId,
           notification_url: WEBHOOK_URL,
           payer: {
-            email: "Mestredaobradecuritiba@gmail.com", // Using the authorized admin email
-            first_name: customerName || "Cliente",
+            email: "comprador@vstore.com",
+            first_name: "Cliente",
             last_name: "Visitante"
           }
         },
@@ -109,9 +112,9 @@ async function startServer() {
         external_reference: orderId
       });
     } catch (error: any) {
-      console.error("Erro Pix MP:", error);
-      // Detailed error logging to help diagnose Mercado Pago issues
-      const errorMessage = error.message || "Erro ao criar pagamento Pix";
+      console.error("ERRO PIX DETALHADO:", JSON.stringify(error, null, 2));
+      let errorMessage = error.message || "Erro ao criar pagamento Pix";
+      if (error.cause && error.cause[0]) errorMessage = error.cause[0].description || errorMessage;
       res.status(500).json({ error: errorMessage });
     }
   });
@@ -153,12 +156,47 @@ async function startServer() {
           
           if (externalReference) {
             try {
+              const orderDoc = await db.collection('orders').doc(externalReference).get();
+              const orderData = orderDoc.exists ? orderDoc.data() : null;
+
               await db.collection('orders').doc(externalReference).update({
                 status: 'Aceito',
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),
                 payment_id: paymentId
               });
               console.log(`Order ${externalReference} marked as PAID (Aceito)`);
+
+              // Send Email Notification
+              if (resend && orderData) {
+                try {
+                  const itemsHtml = orderData.items?.map((item: any) => 
+                    `<li>${item.quantity}x ${item.title || item.name} - R$ ${item.unit_price || item.price}</li>`
+                  ).join('');
+
+                  await resend.emails.send({
+                    from: 'VStore <onboarding@resend.dev>',
+                    to: 'Mestredaobradecuritiba@gmail.com',
+                    subject: '🔥 NOVA VENDA CONFIRMADA - VStore',
+                    html: `
+                      <h1>Parabéns! Venda Confirmada</h1>
+                      <p>O pagamento do pedido <strong>${externalReference}</strong> foi aprovado via Pix.</p>
+                      <hr />
+                      <h3>Detalhes do Pedido:</h3>
+                      <ul>
+                        ${itemsHtml}
+                      </ul>
+                      <p><strong>Total:</strong> R$ ${orderData.total}</p>
+                      <p><strong>Cliente:</strong> ${orderData.customerName}</p>
+                      <p><strong>Endereço:</strong> ${orderData.address || 'Não informado'}</p>
+                      <hr />
+                      <p>Acesse o painel para processar a entrega.</p>
+                    `
+                  });
+                  console.log(`E-mail de confirmação enviado para Mestredaobradecuritiba@gmail.com`);
+                } catch (emailError) {
+                  console.error('Erro ao enviar e-mail:', emailError);
+                }
+              }
             } catch (fsError) {
               console.error(`Error updating order ${externalReference} in Firestore:`, fsError);
             }
