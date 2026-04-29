@@ -114,6 +114,7 @@ export default function Products() {
   const [showMercadoPago, setShowMercadoPago] = useState(false);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'mercadopago'>('mercadopago');
+  const [pixData, setPixData] = useState<{ qr_code: string, qr_code_base64: string } | null>(null);
 
   useEffect(() => {
     if (selectedProduct) {
@@ -161,23 +162,41 @@ export default function Products() {
 
     setBuying(true);
     try {
-      await createOrder({
+      const orderData = {
         customerName: "Cliente Visita",
         address: address,
         paymentMethod: paymentMethod,
         items: [{ 
           id: selectedProduct.id, 
-          name: typeof selectedProduct.name === 'string' ? selectedProduct.name : "Produto", 
-          price: selectedProduct.price,
+          title: typeof selectedProduct.name === 'string' ? selectedProduct.name : "Produto", 
+          unit_price: selectedProduct.price,
           quantity: quantity,
           flavors: selectedFlavors
         }],
         total: (selectedProduct.price * quantity) + 10
-      });
-      
+      };
+
       if (paymentMethod === 'pix') {
+        const response = await fetch('/api/create-pix-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderData)
+        });
+        
+        if (!response.ok) throw new Error("Erro ao gerar Pix");
+        
+        const data = await response.json();
+        setPixData({ qr_code: data.qr_code, qr_code_base64: data.qr_code_base64 });
         setShowPix(true);
       } else {
+        await createOrder({
+          ...orderData,
+          items: [{
+            ...orderData.items[0],
+            name: orderData.items[0].title,
+            price: orderData.items[0].unit_price
+          }]
+        });
         setShowMercadoPago(true);
       }
     } catch (err) {
@@ -193,6 +212,7 @@ export default function Products() {
     setShowMercadoPago(false);
     setPurchaseSuccess(false);
     setAddress('');
+    setPixData(null);
   };
 
   return (
@@ -350,6 +370,8 @@ export default function Products() {
                   <PixCheckout 
                     total={(selectedProduct.price * quantity) + 10}
                     customerName="Cliente Visita"
+                    qrCode={pixData?.qr_code}
+                    qrCodeBase64={pixData?.qr_code_base64}
                     onClose={closeModals}
                   />
                 ) : showMercadoPago ? (

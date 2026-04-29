@@ -10,6 +10,7 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && 
              (request.auth.token.email == 'luiz.uehara1@gmail.com' || 
+              request.auth.token.email == 'Mestredaobradecuritiba@gmail.com' ||
               exists(/databases/$(database)/documents/admins/$(request.auth.token.email)) ||
               request.auth.uid == 'LGEd1P1IwTbqBFzaJaj2BYZEhdw2');
     }

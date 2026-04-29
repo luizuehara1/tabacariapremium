@@ -178,8 +178,9 @@ export const deleteOrder = async (orderId: string) => {
 };
 
 export const isAdminUser = async (email: string) => {
-  // Hardcoded for project owner
-  if (email === 'luiz.uehara1@gmail.com') return true;
+  // Hardcoded for project owners
+  const admins = ['luiz.uehara1@gmail.com', 'Mestredaobradecuritiba@gmail.com'];
+  if (admins.includes(email)) return true;
   
   const path = `admins/${email}`;
   try {

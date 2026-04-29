@@ -7,35 +7,32 @@ interface PixCheckoutProps {
   total: number;
   customerName: string;
   orderId?: string;
+  qrCode?: string;
+  qrCodeBase64?: string;
   onClose: () => void;
 }
 
-export default function PixCheckout({ total, customerName, onClose }: PixCheckoutProps) {
+export default function PixCheckout({ total, qrCode, qrCodeBase64, onClose }: PixCheckoutProps) {
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
-  const PIX_KEY = "SUA_CHAVE_PIX_AQUI"; // In a real app, this would be an env var
   
-  // Simulated loading for QR code generation
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const pixPayload = `00020101021226820014br.gov.bcb.pix0120${PIX_KEY}520400005303986540${total.toFixed(2)}5802BR5912Vapor Street6009Sao Paulo62070503***6304`;
-  // Note: This is a simplified PIX payload for display purposes. 
-  // In a real production environment, you'd use a dedicated library or API to generate a valid static/dynamic EMV PIX payload.
-  // For this frontend-only demo, we'll use a string that looks like a PIX payload.
-  const displayPayload = `Pagamento PIX R$ ${total.toFixed(2)} - Chave: ${PIX_KEY}`;
+    if (qrCodeBase64) {
+      setLoading(false);
+    }
+  }, [qrCodeBase64]);
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(displayPayload);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (qrCode) {
+      navigator.clipboard.writeText(qrCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const shareToWhatsApp = () => {
-    const message = `Olá, acabei de realizar o pagamento via PIX no valor de R$ ${total.toFixed(2)}, segue o comprovante.`;
-    const url = `https://wa.me/5511999999999?text=${encodeURIComponent(message)}`;
+    const message = `Olá, acabei de realizar o pagamento do pedido via PIX no valor de R$ ${total.toFixed(2)}.`;
+    const url = `https://wa.me/5511943801844?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
 
@@ -66,20 +63,16 @@ export default function PixCheckout({ total, customerName, onClose }: PixCheckou
                 <Loader2 className="w-10 h-10 text-brand-accent animate-spin" />
               </div>
             ) : (
-              <QRCodeSVG 
-                value={displayPayload} 
-                size={192}
-                level="H"
-                includeMargin={false}
-                imageSettings={{
-                  src: "/favicon.ico",
-                  x: undefined,
-                  y: undefined,
-                  height: 32,
-                  width: 32,
-                  excavate: true,
-                }}
-              />
+              qrCodeBase64 ? (
+                <img src={`data:image/png;base64,${qrCodeBase64}`} alt="QR Code Pix" className="w-48 h-48" />
+              ) : (
+                <QRCodeSVG 
+                  value={qrCode || ''} 
+                  size={192}
+                  level="H"
+                  includeMargin={false}
+                />
+              )
             )}
           </div>
         </div>
@@ -88,11 +81,12 @@ export default function PixCheckout({ total, customerName, onClose }: PixCheckou
           <div className="bg-brand-black/50 border border-white/5 p-4 rounded-2xl flex items-center justify-between gap-4">
             <div className="flex-1 overflow-hidden">
               <p className="text-[10px] text-white/30 uppercase font-bold mb-1">Código Copia e Cola</p>
-              <p className="text-xs text-white/60 truncate font-mono">{displayPayload}</p>
+              <p className="text-xs text-white/60 truncate font-mono">{qrCode || 'Gerando código...'}</p>
             </div>
             <button 
               onClick={copyToClipboard}
-              className="p-3 bg-brand-accent/10 hover:bg-brand-accent/20 text-brand-accent rounded-xl transition-all relative group"
+              disabled={!qrCode}
+              className="p-3 bg-brand-accent/10 hover:bg-brand-accent/20 text-brand-accent rounded-xl transition-all relative group disabled:opacity-50"
             >
               <AnimatePresence mode="wait">
                 {copied ? (
@@ -127,20 +121,20 @@ export default function PixCheckout({ total, customerName, onClose }: PixCheckou
               className="w-full bg-green-500 hover:bg-green-600 text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-green-500/20 active:scale-[0.98]"
             >
               <MessageCircle size={24} />
-              JÁ PAGUEI
+              JÁ PAGUEI / SUPORTE
             </button>
             <button 
               onClick={onClose}
               className="w-full text-white/30 hover:text-white/60 font-bold py-3 text-sm transition-colors"
             >
-              Cancelar e voltar
+              Cancelar e fechar
             </button>
           </div>
         </div>
 
         <div className="mt-8 flex items-center gap-2 text-white/20 text-[9px] uppercase tracking-widest font-black">
           <AlertCircle size={12} />
-          Pagamento processado via PIX instantâneo
+          Pagamento automático via Mercado Pago
         </div>
       </div>
     </div>

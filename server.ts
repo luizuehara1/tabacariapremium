@@ -2,7 +2,7 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
-import { MercadoPagoConfig, Preference } from 'mercadopago';
+import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 import dotenv from 'dotenv';
 import admin from 'firebase-admin';
 
@@ -52,7 +52,7 @@ async function startServer() {
           },
           auto_return: 'approved',
           external_reference: external_reference,
-          notification_url: `${process.env.APP_URL || 'http://localhost:3000'}/api/mercadopago-webhook`,
+          notification_url: `${process.env.APP_URL || 'http://localhost:3000'}/api/webhook`,
           statement_descriptor: 'VAPOR STREET'
         }
       });
@@ -64,7 +64,59 @@ async function startServer() {
     }
   });
 
-  app.post("/api/mercadopago-webhook", async (req, res) => {
+  app.post("/api/create-pix-payment", async (req, res) => {
+    try {
+      const { items, total, address, customerName } = req.body;
+      const orderId = `ORDER-${Date.now()}`;
+      const WEBHOOK_URL = process.env.APP_URL || 'https://tabacariapremium.vercel.app/api/webhook';
+      
+      const payment = new Payment(client);
+      
+      const result = await payment.create({
+        body: {
+          transaction_amount: Number(total),
+          description: items.map((i: any) => i.title).join(", "),
+          payment_method_id: "pix",
+          external_reference: orderId,
+          notification_url: WEBHOOK_URL,
+          payer: {
+            email: "Mestredaobradecuritiba@gmail.com", // Using the authorized admin email
+            first_name: customerName || "Cliente",
+            last_name: "Visitante"
+          }
+        },
+        requestOptions: {
+          idempotencyKey: orderId
+        }
+      });
+
+      // Initializing order in Firestore as Pending
+      await db.collection('orders').doc(orderId).set({
+        customerName: customerName || "Cliente Visita",
+        address: address,
+        paymentMethod: 'pix',
+        items: items,
+        total: total,
+        status: 'Pendente',
+        payment_id: result.id,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      res.json({
+        id: result.id,
+        qr_code: result.point_of_interaction?.transaction_data?.qr_code,
+        qr_code_base64: result.point_of_interaction?.transaction_data?.qr_code_base64,
+        external_reference: orderId
+      });
+    } catch (error: any) {
+      console.error("Erro Pix MP:", error);
+      // Detailed error logging to help diagnose Mercado Pago issues
+      const errorMessage = error.message || "Erro ao criar pagamento Pix";
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+
+  app.post("/api/webhook", async (req, res) => {
     console.log("Webhook recebido:", req.body);
     const { body, query } = req;
     
