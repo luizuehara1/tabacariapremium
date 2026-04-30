@@ -51,35 +51,34 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 // Real-time products subscription
 export const subscribeProducts = (callback: (products: any[]) => void) => {
   const path = 'products';
-  const q = query(collection(db, path), orderBy('createdAt', 'desc'));
-  
-  return onSnapshot(q, (snapshot) => {
+  // Use a simple query first to ensure all products are fetched even if createdAt is missing
+  return onSnapshot(collection(db, path), (snapshot) => {
     const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    callback(products);
+    // Sort client-side to be safe
+    const sortedProducts = products.sort((a: any, b: any) => {
+      const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
+      const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
+      return dateB - dateA;
+    });
+    callback(sortedProducts);
   }, (error) => {
     console.error("Real-time subscription error:", error);
-    // Fallback if index fails
-    return onSnapshot(collection(db, path), (snapshot) => {
-      const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      callback(products);
-    });
+    handleFirestoreError(error, OperationType.GET, path);
   });
 };
 
 export const getProducts = async () => {
   const path = 'products';
   try {
-    const q = query(collection(db, path), orderBy('createdAt', 'desc'));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const snapshot = await getDocs(collection(db, path));
+    const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return products.sort((a: any, b: any) => {
+      const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
+      const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
+      return dateB - dateA;
+    });
   } catch (error) {
-    // If it fails because of missing index, fallback to unordered
-    try {
-      const snapshot = await getDocs(collection(db, path));
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    } catch (innerError) {
-      handleFirestoreError(error, OperationType.LIST, path);
-    }
+    handleFirestoreError(error, OperationType.LIST, path);
   }
 };
 

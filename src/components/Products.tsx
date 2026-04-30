@@ -2,7 +2,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ShoppingCart, Star, X, Truck, Loader2, Package, CheckCircle2, CreditCard, QrCode } from 'lucide-react';
 import { useState, useEffect, type FormEvent } from 'react';
 import { getProducts, createOrder, subscribeProducts } from '../services/storeService';
-import PixCheckout from './PixCheckout';
 import MercadoPagoCheckout from './MercadoPagoCheckout';
 
 interface ProductImageProps {
@@ -110,11 +109,9 @@ export default function Products() {
   const [quantity, setQuantity] = useState(1);
   const [selectedFlavors, setSelectedFlavors] = useState<string[]>(['']);
   const [buying, setBuying] = useState(false);
-  const [showPix, setShowPix] = useState(false);
   const [showMercadoPago, setShowMercadoPago] = useState(false);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'mercadopago'>('mercadopago');
-  const [pixData, setPixData] = useState<{ qr_code: string, qr_code_base64: string } | null>(null);
+  const [paymentMethod] = useState<'mercadopago'>('mercadopago');
 
   useEffect(() => {
     if (selectedProduct) {
@@ -165,7 +162,7 @@ export default function Products() {
       const orderData = {
         customerName: "Cliente Visita",
         address: address,
-        paymentMethod: paymentMethod,
+        paymentMethod: 'mercadopago',
         items: [{ 
           id: selectedProduct.id, 
           title: typeof selectedProduct.name === 'string' ? selectedProduct.name : "Produto", 
@@ -176,29 +173,15 @@ export default function Products() {
         total: (selectedProduct.price * quantity) + 10
       };
 
-      if (paymentMethod === 'pix') {
-        const response = await fetch('/api/create-pix-payment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(orderData)
-        });
-        
-        if (!response.ok) throw new Error("Erro ao gerar Pix");
-        
-        const data = await response.json();
-        setPixData({ qr_code: data.qr_code, qr_code_base64: data.qr_code_base64 });
-        setShowPix(true);
-      } else {
-        await createOrder({
-          ...orderData,
-          items: [{
-            ...orderData.items[0],
-            name: orderData.items[0].title,
-            price: orderData.items[0].unit_price
-          }]
-        });
-        setShowMercadoPago(true);
-      }
+      await createOrder({
+        ...orderData,
+        items: [{
+          ...orderData.items[0],
+          name: orderData.items[0].title,
+          price: orderData.items[0].unit_price
+        }]
+      });
+      setShowMercadoPago(true);
     } catch (err) {
       alert("Erro ao processar pedido. Verifique os dados.");
     } finally {
@@ -208,11 +191,9 @@ export default function Products() {
 
   const closeModals = () => {
     setSelectedProduct(null);
-    setShowPix(false);
     setShowMercadoPago(false);
     setPurchaseSuccess(false);
     setAddress('');
-    setPixData(null);
   };
 
   return (
@@ -354,10 +335,10 @@ export default function Products() {
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className={`relative bg-brand-dark border border-white/10 w-full ${showPix || showMercadoPago ? 'max-w-md' : 'max-w-lg'} rounded-[32px] overflow-hidden shadow-2xl flex flex-col`}
+              className={`relative bg-brand-dark border border-white/10 w-full ${showMercadoPago ? 'max-w-md' : 'max-w-lg'} rounded-[32px] overflow-hidden shadow-2xl flex flex-col`}
             >
-              <div className={showPix || showMercadoPago ? "" : "p-8"}>
-                {!(showPix || showMercadoPago) && (
+              <div className={showMercadoPago ? "" : "p-8"}>
+                {!(showMercadoPago) && (
                   <button 
                     onClick={closeModals}
                     className="absolute top-6 right-6 text-white/50 hover:text-white z-20"
@@ -366,15 +347,7 @@ export default function Products() {
                   </button>
                 )}
 
-                {showPix ? (
-                  <PixCheckout 
-                    total={(selectedProduct.price * quantity) + 10}
-                    customerName="Cliente Visita"
-                    qrCode={pixData?.qr_code}
-                    qrCodeBase64={pixData?.qr_code_base64}
-                    onClose={closeModals}
-                  />
-                ) : showMercadoPago ? (
+                {showMercadoPago ? (
                   <MercadoPagoCheckout 
                     total={(selectedProduct.price * quantity) + 10}
                     items={[{
@@ -454,31 +427,9 @@ export default function Products() {
 
                       <div className="space-y-4">
                         <label className="block text-sm font-medium text-white/50 mb-2">Forma de Pagamento</label>
-                        <div className="grid grid-cols-2 gap-4">
-                          <button
-                            type="button"
-                            onClick={() => setPaymentMethod('mercadopago')}
-                            className={`p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${
-                              paymentMethod === 'mercadopago' 
-                                ? 'bg-brand-accent/20 border-brand-accent text-white' 
-                                : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10'
-                            }`}
-                          >
-                            <CreditCard size={20} />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Cartão / MP</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPaymentMethod('pix')}
-                            className={`p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${
-                              paymentMethod === 'pix' 
-                                ? 'bg-brand-accent/20 border-brand-accent text-white' 
-                                : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10'
-                            }`}
-                          >
-                            <QrCode size={20} />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Pix Direto</span>
-                          </button>
+                        <div className="p-4 rounded-2xl border bg-brand-accent/20 border-brand-accent text-white flex flex-col items-center gap-2">
+                          <CreditCard size={20} />
+                          <span className="text-[10px] font-black uppercase tracking-widest">Cartão de Crédito / Mercado Pago</span>
                         </div>
                       </div>
 
