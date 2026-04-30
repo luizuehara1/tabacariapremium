@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/create-preference.ts": {
+      "runtime": "nodejs18.x"
+    }
+  }
+}
