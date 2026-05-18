@@ -2,5 +2,7 @@
   "name": "Vapor Street Shop",
   "description": "Uma experiência premium em pods, vapes e acessórios com entrega rápida e produtos originais.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

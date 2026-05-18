@@ -1,78 +1,51 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // --- Global Helpers ---
+
     function isSignedIn() {
       return request.auth != null;
     }
 
+    function adminDocExists() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/administradores/$(request.auth.token.email));
+    }
+
+    function adminDocExistsLowercase() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/administradores/$(request.auth.token.email.lower()));
+    }
+
     function isAdmin() {
-      return isSignedIn() && 
-             (request.auth.token.email == 'luiz.uehara1@gmail.com' || 
-              request.auth.token.email == 'mestredaobradecuritiba@gmail.com' ||
-              exists(/databases/$(database)/documents/admins/$(request.auth.token.email)) ||
-              request.auth.uid == 'LGEd1P1IwTbqBFzaJaj2BYZEhdw2');
+      return adminDocExists() || adminDocExistsLowercase();
     }
 
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    match /products/{docId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
     }
 
-    function incoming() {
-      return request.resource.data;
-    }
-    
-    function existing() {
-      return resource.data;
+    match /orders/{docId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
     }
 
-    // --- Validation Helpers ---
-    function isValidProduct(data) {
-      return data.keys().hasAll(['name', 'price', 'image']) &&
-             data.name is string && data.name.size() > 0 &&
-             data.price is number &&
-             data.image is string;
+    match /admins/{docId} {
+      allow read, write: if isAdmin();
     }
 
-    function isValidOrder(data) {
-      return data.keys().hasAll(['customerName', 'address', 'items', 'total', 'status', 'createdAt']) &&
-             data.customerName is string &&
-             data.address is string &&
-             data.items is list &&
-             data.total is number &&
-             data.status is string &&
-             data.createdAt == request.time;
+    match /administradores/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
 
-    // --- Collections ---
-
-    // Connection test document
-    match /test/connection {
-      allow read, get, list: if true;
+    match /{collName}/{docId} {
+      allow read: if collName == "padrão" || collName == "settings";
+      allow write: if (collName == "padrão" || collName == "settings") && isAdmin();
     }
 
-    match /admins/{email} {
-      allow get: if isSignedIn() && (request.auth.token.email == email || isAdmin());
-      allow list: if isAdmin();
-      allow write: if false; 
-    }
-
-    match /products/{productId} {
-      allow read, get, list: if true;
-      allow write: if isAdmin();
-    }
-
-    match /orders/{orderId} {
-      allow list, get: if isAdmin();
-      allow create: if true; // Allow anyone to place orders for now
-      allow update, delete: if isAdmin();
-    }
-
-    // Default deny
     match /{document=**} {
       allow read, write: if false;
     }
   }
 }
-

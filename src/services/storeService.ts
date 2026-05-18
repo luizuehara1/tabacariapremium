@@ -9,7 +9,8 @@ import {
   orderBy, 
   serverTimestamp,
   getDoc,
-  onSnapshot
+  onSnapshot,
+  setDoc
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 
@@ -116,13 +117,23 @@ export const deleteProduct = async (productId: string) => {
 export const createOrder = async (order: any) => {
   const path = 'orders';
   try {
-    const res = await addDoc(collection(db, path), {
+    const orderData = {
       ...order,
       shipping: 10,
-      status: 'Pendente',
+      status: order.status || 'Pendente',
       createdAt: serverTimestamp()
-    });
-    return res.id;
+    };
+
+    if (order.id) {
+      const orderId = order.id;
+      // Remove id from data to avoid duplicating it inside the document
+      const { id, ...data } = orderData;
+      await setDoc(doc(db, path, orderId), data);
+      return orderId;
+    } else {
+      const res = await addDoc(collection(db, path), orderData);
+      return res.id;
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, path);
   }
@@ -176,16 +187,96 @@ export const deleteOrder = async (orderId: string) => {
   }
 };
 
-export const isAdminUser = async (email: string) => {
-  // Hardcoded for project owners
-  const admins = ['luiz.uehara1@gmail.com', 'Mestredaobradecuritiba@gmail.com'];
-  if (admins.includes(email)) return true;
-  
-  const path = `admins/${email}`;
+// Funções genéricas solicitadas
+export const getCollectionData = async (collectionName: string) => {
   try {
-    const adminDoc = await getDoc(doc(db, 'admins', email));
-    return adminDoc.exists();
+    const snapshot = await getDocs(collection(db, collectionName));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
+    console.error(`Erro ao buscar ${collectionName}:`, error);
+    handleFirestoreError(error, OperationType.LIST, collectionName);
+  }
+};
+
+export const getDocumentData = async (collectionName: string, documentId: string) => {
+  try {
+    const docRef = doc(db, collectionName, documentId);
+    const snapshot = await getDoc(docRef);
+    return snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null;
+  } catch (error) {
+    console.error(`Erro ao buscar documento em ${collectionName}:`, error);
+    handleFirestoreError(error, OperationType.GET, `${collectionName}/${documentId}`);
+  }
+};
+
+export const listenCollection = (collectionName: string, callback: (data: any[]) => void) => {
+  return onSnapshot(collection(db, collectionName), (snapshot) => {
+    callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+  }, (error) => {
+    console.error(`Erro ao escutar ${collectionName}:`, error);
+    handleFirestoreError(error, OperationType.LIST, collectionName);
+  });
+};
+
+export const createDocument = async (collectionName: string, data: any) => {
+  try {
+    const res = await addDoc(collection(db, collectionName), {
+      ...data,
+      createdAt: serverTimestamp()
+    });
+    return res.id;
+  } catch (error) {
+    console.error(`Erro ao criar em ${collectionName}:`, error);
+    handleFirestoreError(error, OperationType.CREATE, collectionName);
+  }
+};
+
+export const updateDocument = async (collectionName: string, documentId: string, data: any) => {
+  try {
+    await updateDoc(doc(db, collectionName, documentId), data);
+  } catch (error) {
+    console.error(`Erro ao atualizar em ${collectionName}:`, error);
+    handleFirestoreError(error, OperationType.UPDATE, `${collectionName}/${documentId}`);
+  }
+};
+
+export const deleteDocument = async (collectionName: string, documentId: string) => {
+  try {
+    await deleteDoc(doc(db, collectionName, documentId));
+  } catch (error) {
+    console.error(`Erro ao deletar em ${collectionName}:`, error);
+    handleFirestoreError(error, OperationType.DELETE, `${collectionName}/${documentId}`);
+  }
+};
+
+export const isAdminUser = async (email: string) => {
+  if (!email) return false;
+  
+  // 1. Email em lowercase para comparação consistente
+  const emailLower = email.toLowerCase();
+  
+  // 2. Hardcoded (opcional, mas o usuário pediu para buscar REAL)
+  const masterAdmins = ['luiz.uehara1@gmail.com', 'mestredaobradecuritiba@gmail.com'];
+  if (masterAdmins.includes(emailLower)) return true;
+  
+  try {
+    // 3. Verificar na coleção "administradores" onde ID é o email
+    const adminDoc = await getDoc(doc(db, 'administradores', emailLower));
+    if (adminDoc.exists() && adminDoc.data()?.admin === true) {
+      return true;
+    }
+    
+    // 4. Verificar emails que podem estar com casing diferente se não for o ID
+    const q = query(collection(db, 'administradores'), orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    const found = snapshot.docs.find(d => {
+      const data = d.data();
+      return (data.email?.toLowerCase() === emailLower && data.admin === true);
+    });
+    
+    return !!found;
+  } catch (error) {
+    console.error("Erro ao verificar administradores:", error);
     return false;
   }
 };

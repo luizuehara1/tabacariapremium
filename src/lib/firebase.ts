@@ -1,28 +1,24 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
-import { initializeFirestore, doc, getDocFromServer } from "firebase/firestore";
+import { getAnalytics, isSupported } from "firebase/analytics";
+import { getFirestore } from "firebase/firestore";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
 import firebaseConfig from "../../firebase-applet-config.json";
 
+// 1. Inicializar o app Firebase apenas uma vez.
 const app = initializeApp(firebaseConfig);
 
-// 🔥 CORREÇÃO DO ERRO OFFLINE
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-});
-
+// 2. Exportar:
+export { app };
+export const db = getFirestore(app);
 export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
+export const provider = new GoogleAuthProvider();
 
-export async function testConnection() {
-  console.log("Iniciando diagnóstico Firestore...");
-  try {
-    const testDoc = doc(db, "test", "connection");
-    await getDocFromServer(testDoc);
-    console.log("✅ Conexão com Firestore estabelecida.");
-  } catch (error) {
-    console.error("❌ Erro no teste de conexão Firestore:", error);
-  }
-}
+// Analytics com verificação para não quebrar no SSR/Vercel
+export const analytics = typeof window !== "undefined" 
+  ? isSupported().then(yes => yes ? getAnalytics(app) : null)
+  : Promise.resolve(null);
 
-export const loginWithGoogle = () => signInWithPopup(auth, googleProvider);
+// Funções auxiliares de Auth
+export { onAuthStateChanged };
+export const loginWithGoogle = () => signInWithPopup(auth, provider);
 export const logout = () => signOut(auth);

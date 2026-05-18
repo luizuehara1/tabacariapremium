@@ -401,16 +401,23 @@ export default function AdminPanel({ isOpen, onClose }: { isOpen: boolean, onClo
                 <X className="text-red-500" size={32} />
               </div>
               <h3 className="text-xl font-bold text-white mb-2">Acesso Negado</h3>
-              <p className="text-white/50 mb-8 max-w-md">{user.email} não tem permissão de administrador no Firebase.</p>
+              <p className="text-white/50 mb-8 max-w-sm mx-auto">Você não tem permissão para acessar o painel administrativo.</p>
               
               <div className="p-6 bg-white/5 rounded-[24px] mb-8 w-full max-w-md text-left">
-                <div className="text-[10px] text-white/30 mb-2 font-black uppercase tracking-widest">Guia para Liberar Acesso:</div>
-                <p className="text-xs text-white/40 mb-4 leading-relaxed">No Firestore, crie uma coleção chamada <code className="text-brand-accent">admins</code> e adicione um documento com este ID:</p>
-                <code className="text-brand-accent text-xs break-all font-mono bg-black/40 p-3 rounded-xl block border border-brand-accent/20 select-all">{user.email}</code>
+                <div className="text-[10px] text-white/30 mb-2 font-black uppercase tracking-widest">Informações de Login:</div>
+                <div className="space-y-4">
+                  <div>
+                    <div className="text-[8px] text-white/20 uppercase font-black mb-1">Email Logado</div>
+                    <code className="text-brand-accent text-xs break-all font-mono bg-black/40 p-3 rounded-xl block border border-brand-accent/20 select-all">{user.email}</code>
+                  </div>
+                  <p className="text-xs text-white/40 leading-relaxed italic">
+                    O administrador deve cadastrar este email (em minúsculo) na coleção <code className="text-brand-accent">administradores</code> no Firestore com o campo <code className="text-brand-accent">admin: true</code> para liberar o acesso.
+                  </p>
+                </div>
               </div>
 
-              <button onClick={logout} className="text-white/40 hover:text-white flex items-center gap-2 mx-auto font-bold text-sm">
-                <LogOut size={16} /> SAI DA CONTA
+              <button onClick={logout} className="text-white/40 hover:text-white flex items-center gap-2 mx-auto font-bold text-sm bg-white/5 px-6 py-3 rounded-xl transition-all">
+                <LogOut size={16} /> SAIR DA CONTA
               </button>
             </div>
           ) : (

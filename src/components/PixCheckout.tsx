@@ -1,26 +1,18 @@
+import { motion } from 'motion/react';
+import { QrCode, Copy, CheckCircle2, Loader2, X, RefreshCw } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
-import { Copy, CheckCircle2, MessageCircle, AlertCircle, Loader2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 
 interface PixCheckoutProps {
   total: number;
   customerName: string;
-  orderId?: string;
   qrCode?: string;
   qrCodeBase64?: string;
+  orderId?: string;
   onClose: () => void;
 }
 
-export default function PixCheckout({ total, qrCode, qrCodeBase64, onClose }: PixCheckoutProps) {
+export default function PixCheckout({ total, customerName, qrCode, qrCodeBase64, orderId, onClose }: PixCheckoutProps) {
   const [copied, setCopied] = useState(false);
-  const [loading, setLoading] = useState(true);
-  
-  useEffect(() => {
-    if (qrCodeBase64) {
-      setLoading(false);
-    }
-  }, [qrCodeBase64]);
 
   const copyToClipboard = () => {
     if (qrCode) {
@@ -30,113 +22,77 @@ export default function PixCheckout({ total, qrCode, qrCodeBase64, onClose }: Pi
     }
   };
 
-  const shareToWhatsApp = () => {
-    const message = `Olá, acabei de realizar o pagamento do pedido via PIX no valor de R$ ${total.toFixed(2)}.`;
-    const url = `https://wa.me/5511943801844?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
-  };
-
   return (
-    <div className="flex flex-col items-center p-6 sm:p-8 bg-brand-dark rounded-[32px] w-full max-w-md mx-auto relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-brand-accent/10 blur-3xl -translate-y-1/2 translate-x-1/2 rounded-full" />
-      
-      <div className="relative z-10 w-full flex flex-col items-center">
-        <div className="mb-8 text-center">
-          <h2 className="text-2xl font-black tracking-tight mb-2">PAGAMENTO <span className="text-brand-accent">PIX</span></h2>
-          <p className="text-white/40 text-sm">Escaneie o código abaixo para finalizar</p>
+    <div className="flex flex-col items-center p-6 text-center">
+      <button 
+        onClick={onClose}
+        className="absolute top-6 right-6 text-white/50 hover:text-white"
+      >
+        <X />
+      </button>
+
+      <div className="w-16 h-16 bg-brand-accent/10 rounded-full flex items-center justify-center mb-6">
+        <QrCode className="text-brand-accent" size={32} />
+      </div>
+
+      <h3 className="text-2xl font-black mb-2 uppercase tracking-tight">Pagamento Pix</h3>
+      <p className="text-white/40 text-sm mb-8">Escaneie o código abaixo para finalizar o pedido de {customerName}</p>
+
+      <div className="p-4 bg-white/5 rounded-3xl border border-white/10 mb-8 w-full">
+        <div className="flex justify-between items-center mb-4 px-2">
+          <span className="text-[10px] font-black uppercase tracking-widest text-white/30">Valor Total</span>
+          <span className="text-xl font-black text-brand-accent">R$ {total.toFixed(2)}</span>
         </div>
 
-        <div className="bg-white/5 p-4 rounded-3xl border border-white/10 mb-8 w-full flex flex-col items-center">
-          <div className="text-white/40 text-[10px] uppercase font-black tracking-widest mb-1">Valor Total</div>
-          <div className="text-4xl font-black text-white">
-            <span className="text-brand-accent text-lg align-top mr-1">R$</span>
-            {total.toFixed(2)}
-          </div>
+        <div className="bg-white p-6 rounded-2xl mb-4 flex items-center justify-center shadow-2xl">
+          {qrCodeBase64 ? (
+            <img 
+              src={`data:image/jpeg;base64,${qrCodeBase64}`} 
+              alt="QR Code Pix" 
+              className="w-48 h-48"
+            />
+          ) : (
+            <div className="w-48 h-48 flex items-center justify-center">
+              <Loader2 className="animate-spin text-brand-black/20" size={40} />
+            </div>
+          )}
         </div>
 
-        <div className="relative mb-8 group">
-          <div className="absolute -inset-4 bg-brand-accent/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <div className="relative bg-white p-6 rounded-[2.5rem] shadow-2xl shadow-brand-accent/10">
-            {loading ? (
-              <div className="w-48 h-48 flex items-center justify-center">
-                <Loader2 className="w-10 h-10 text-brand-accent animate-spin" />
-              </div>
-            ) : (
-              qrCodeBase64 ? (
-                <img src={`data:image/png;base64,${qrCodeBase64}`} alt="QR Code Pix" className="w-48 h-48" />
-              ) : (
-                <QRCodeSVG 
-                  value={qrCode || ''} 
-                  size={192}
-                  level="H"
-                  includeMargin={false}
-                />
-              )
-            )}
-          </div>
-        </div>
-
-        <div className="w-full space-y-4">
-          <div className="bg-brand-black/50 border border-white/5 p-4 rounded-2xl flex items-center justify-between gap-4">
-            <div className="flex-1 overflow-hidden">
-              <p className="text-[10px] text-white/30 uppercase font-bold mb-1">Código Copia e Cola</p>
-              <p className="text-xs text-white/60 truncate font-mono">{qrCode || 'Gerando código...'}</p>
+        <div className="space-y-4">
+          <div className="bg-brand-black p-4 rounded-xl border border-white/5 relative group">
+            <div className="text-[8px] text-white/20 uppercase font-black text-left mb-1">Código Copia e Cola</div>
+            <div className="text-[10px] text-white/50 break-all font-mono line-clamp-2 text-left">
+              {qrCode || "Gerando código..."}
             </div>
             <button 
               onClick={copyToClipboard}
-              disabled={!qrCode}
-              className="p-3 bg-brand-accent/10 hover:bg-brand-accent/20 text-brand-accent rounded-xl transition-all relative group disabled:opacity-50"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-brand-accent text-white rounded-lg shadow-lg hover:scale-110 transition-transform"
             >
-              <AnimatePresence mode="wait">
-                {copied ? (
-                  <motion.div
-                    key="check"
-                    initial={{ scale: 0.5, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.5, opacity: 0 }}
-                  >
-                    <CheckCircle2 size={20} />
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="copy"
-                    initial={{ scale: 0.5, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.5, opacity: 0 }}
-                  >
-                    <Copy size={20} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              <span className={`absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-brand-accent text-white text-[10px] rounded font-bold transition-all ${copied ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
-                COPIADO
-              </span>
+              {copied ? <CheckCircle2 size={16} /> : <Copy size={16} />}
             </button>
           </div>
 
-          <div className="space-y-3">
-            <button 
-              onClick={shareToWhatsApp}
-              className="w-full bg-green-500 hover:bg-green-600 text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-green-500/20 active:scale-[0.98]"
-            >
-              <MessageCircle size={24} />
-              JÁ PAGUEI / SUPORTE
-            </button>
-            <button 
-              onClick={onClose}
-              className="w-full text-white/30 hover:text-white/60 font-bold py-3 text-sm transition-colors"
-            >
-              Cancelar e fechar
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-8 flex items-center gap-2 text-white/20 text-[9px] uppercase tracking-widest font-black">
-          <AlertCircle size={12} />
-          Pagamento automático via Mercado Pago
+          <button 
+            onClick={copyToClipboard}
+            className="w-full bg-white text-brand-black py-4 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-accent hover:text-white transition-all shadow-lg shadow-black/20"
+          >
+            {copied ? (
+              <><CheckCircle2 size={14} /> Código Copiado!</>
+            ) : (
+              <><Copy size={14} /> Copiar Código Pix</>
+            )}
+          </button>
         </div>
       </div>
+
+      <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-brand-accent animate-pulse">
+        <RefreshCw size={12} className="animate-spin-slow" />
+        Aguardando Pagamento...
+      </div>
+
+      <p className="text-[9px] text-white/20 mt-8 uppercase tracking-widest font-bold max-w-[200px]">
+        O status será atualizado automaticamente assim que o pagamento for confirmado.
+      </p>
     </div>
   );
 }

@@ -1,27 +1,28 @@
 # Security Specification - Vapor Street
 
 ## 1. Data Invariants
-- Products can only be created/updated/deleted by Admins.
-- Orders can be created by anyone (public), but must have a valid structure.
-- Orders once created are immutable for the client (except maybe status by admin).
-- Admin status is verified by lookup in the `admins` collection.
+- A product must have a name, price, and image.
+- An order must have a customer name, address, items, and total.
+- Order status starts as 'Pendente'.
+- Only admins can manage products.
+- Users can view their own orders (if auth'd) or admins can view all.
 
-## 2. The Dirty Dozen Payloads (Targeting Rejection)
-1. Creating a product as a non-admin.
-2. Updating product price to 0 or negative.
-3. Injecting a massive string as a product description.
-4. Deleting a product as a non-admin.
-5. Creating an order without a customer address.
-6. Creating an order with a mismatched shipping price (must be 10).
-7. Updating an existing order's address after creation (non-admin).
-8. Listing all orders as a non-admin.
-9. Attempting to make oneself an admin in the `admins` collection.
-10. Creating a product with a non-string image URL.
-11. Order items being a non-array.
-12. Order status being "Delivered" immediately on creation.
+## 2. The "Dirty Dozen" Payloads
+1. Create a product as a non-admin.
+2. Update a product's price as a non-admin.
+3. Delete a product as a non-admin.
+4. Create an order with a fake `total` (e.g., negative).
+5. Update an order's status to 'Entregue' as a customer.
+6. Create an order and set own `uid` to another user's `uid`.
+7. List all orders as a standard user.
+8. Injection: Create a product with a 1MB name string.
+9. Injection: Create a document in a collection not in the blueprint.
+10. Update an order but change the `createdAt` timestamp.
+11. Spoofing: Set `role` to 'admin' in a user document (if it existed).
+12. Accessing PII (address) of other users' orders.
 
-## 3. Rules Implementation Strategy
-- `isValidProduct()` helper for schema validation.
-- `isValidOrder()` helper for schema validation.
-- `isAdmin()` helper that checks `exists(/databases/$(database)/documents/admins/$(request.auth.uid))`.
-- Global default deny.
+## 3. Red Team Evaluation (Summary)
+- **Identity Spoofing**: Rejected by `request.auth.uid` checks or strict field validation.
+- **State Shortcutting**: `affectedKeys().hasOnly()` during updates blocks unauthorized field changes.
+- **Resource Poisoning**: `.size() <= MAX` on all strings.
+- **Value Poisoning**: `isValid[Entity]()` checks types and ranges.

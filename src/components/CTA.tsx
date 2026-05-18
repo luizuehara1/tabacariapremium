@@ -1,8 +1,9 @@
 import { motion } from 'motion/react';
-import { Send } from 'lucide-react';
+import { Send, Instagram } from 'lucide-react';
 
 export default function CTA() {
-  const whatsappUrl = "https://wa.me/55SEUNUMERO?text=Olá,%20quero%20comprar%20pods";
+  const whatsappUrl = "https://wa.me/5541999999999?text=Olá,%20quero%20comprar%20pods";
+  const instagramUrl = "https://instagram.com/vapor_.street";
 
   return (
     <section className="py-24 relative overflow-hidden">
@@ -22,21 +23,30 @@ export default function CTA() {
             Garante o seu <span className="text-gradient">agora</span>
           </h2>
           <p className="text-white/50 text-lg mb-12 max-w-2xl mx-auto">
-            Não perca tempo. Nosso estoque voa! Clique no botão abaixo e fale diretamente com o nosso time especializado pelo WhatsApp.
+            Não perca tempo. Nosso estoque voa! Clique no botão abaixo e fale diretamente com o nosso time especializado pelo WhatsApp ou nos siga no Instagram.
           </p>
           
-          <div className="flex flex-col items-center gap-6">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
             <a 
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-[#25D366] hover:bg-[#128C7E] text-white px-10 py-5 rounded-full font-bold text-xl flex items-center justify-center gap-3 transition-all scale-100 hover:scale-105 shadow-xl shadow-[#25D366]/20"
+              className="w-full sm:w-auto bg-[#25D366] hover:bg-[#128C7E] text-white px-10 py-5 rounded-full font-bold text-xl flex items-center justify-center gap-3 transition-all scale-100 hover:scale-105 shadow-xl shadow-[#25D366]/20"
             >
-              Comprar pelo WhatsApp
+              WhatsApp
               <Send size={24} />
             </a>
-            <span className="text-white/30 text-sm font-medium">Atendimento rápido e personalizado</span>
+            <a 
+              href={instagramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] hover:opacity-90 text-white px-10 py-5 rounded-full font-bold text-xl flex items-center justify-center gap-3 transition-all scale-100 hover:scale-105 shadow-xl shadow-pink-500/20"
+            >
+              Instagram
+              <Instagram size={24} />
+            </a>
           </div>
+          <p className="mt-8 text-white/30 text-sm font-medium">Atendimento rápido e personalizado via Direct ou WhatsApp</p>
         </motion.div>
       </div>
     </section>

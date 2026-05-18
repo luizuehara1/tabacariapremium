@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Menu, X, ShoppingBag, Lock } from 'lucide-react';
+import { Menu, X, ShoppingBag, Lock, Instagram } from 'lucide-react';
 import { useState } from 'react';
 import AdminPanel from './AdminPanel';
 
@@ -43,6 +43,15 @@ export default function Navbar() {
                 </nav>
                 
                 <div className="flex items-center gap-4 pl-8 border-l border-white/5">
+                  <a 
+                    href="https://instagram.com/vapor_.street" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="p-3 rounded-xl bg-white/5 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 transition-all"
+                    title="Instagram"
+                  >
+                    <Instagram size={16} />
+                  </a>
                   <button 
                     onClick={() => setIsAdminOpen(true)}
                     className="p-3 rounded-xl bg-white/5 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 transition-all"
@@ -78,11 +87,23 @@ export default function Navbar() {
             animate={{ opacity: 1, y: 0 }}
             className="md:hidden bg-brand-black border-b border-white/5"
           >
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 text-center">
               <a href="#home" onClick={() => setIsOpen(false)} className="text-white block px-3 py-4 text-base font-medium border-b border-white/5">Início</a>
               <a href="#produtos" onClick={() => setIsOpen(false)} className="text-white block px-3 py-4 text-base font-medium border-b border-white/5">Produtos</a>
               <a href="#diferenciais" onClick={() => setIsOpen(false)} className="text-white block px-3 py-4 text-base font-medium border-b border-white/5">Diferenciais</a>
               <a href="#sobre" onClick={() => setIsOpen(false)} className="text-white block px-3 py-4 text-base font-medium">Sobre</a>
+              
+              <div className="flex justify-center py-4 border-t border-white/5">
+                <a 
+                  href="https://instagram.com/vapor_.street" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-white/50 hover:text-white font-bold"
+                >
+                  <Instagram size={20} />
+                  <span>@vapor_.street</span>
+                </a>
+              </div>
               <div className="p-3">
                 <a href="#produtos" onClick={() => setIsOpen(false)} className="block w-full text-center bg-brand-accent text-white px-6 py-3 rounded-xl font-bold">Comprar Agora</a>
               </div>

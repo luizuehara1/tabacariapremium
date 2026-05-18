@@ -3,6 +3,7 @@ import { ShoppingCart, Star, X, Truck, Loader2, Package, CheckCircle2, CreditCar
 import { useState, useEffect, type FormEvent } from 'react';
 import { getProducts, createOrder, subscribeProducts } from '../services/storeService';
 import MercadoPagoCheckout from './MercadoPagoCheckout';
+import PixCheckout from './PixCheckout';
 
 interface ProductImageProps {
   src: string;
@@ -109,9 +110,11 @@ export default function Products() {
   const [quantity, setQuantity] = useState(1);
   const [selectedFlavors, setSelectedFlavors] = useState<string[]>(['']);
   const [buying, setBuying] = useState(false);
+  const [showPix, setShowPix] = useState(false);
   const [showMercadoPago, setShowMercadoPago] = useState(false);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
-  const [paymentMethod] = useState<'mercadopago'>('mercadopago');
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'mercadopago'>('pix');
+  const [pixData, setPixData] = useState<{ qr_code: string, qr_code_base64: string, external_reference: string } | null>(null);
 
   useEffect(() => {
     if (selectedProduct) {
@@ -157,33 +160,83 @@ export default function Products() {
       return;
     }
 
+    const totalOrder = (selectedProduct.price * quantity) + 10;
+    if (totalOrder <= 0) {
+      alert("Valor do pedido inválido.");
+      return;
+    }
+
     setBuying(true);
     try {
-      const orderData = {
-        customerName: "Cliente Visita",
-        address: address,
-        paymentMethod: 'mercadopago',
-        items: [{ 
-          id: selectedProduct.id, 
-          title: typeof selectedProduct.name === 'string' ? selectedProduct.name : "Produto", 
-          unit_price: selectedProduct.price,
-          quantity: quantity,
-          flavors: selectedFlavors
-        }],
-        total: (selectedProduct.price * quantity) + 10
-      };
+      if (paymentMethod === 'pix') {
+        const orderId = `ORDER-${Date.now()}`;
+        
+        // 1. First attempt to create the payment in MP
+        const response = await fetch('/api/create-pix-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: totalOrder,
+            description: `${quantity}x ${selectedProduct.name}`,
+            orderId: orderId,
+            payer: {
+              email: "contato@vaporstreet.com.br",
+              first_name: "Cliente"
+            },
+            items: [{
+              id: selectedProduct.id,
+              title: selectedProduct.name,
+              quantity: quantity,
+              unit_price: selectedProduct.price,
+              flavors: selectedFlavors
+            }]
+          })
+        });
 
-      await createOrder({
-        ...orderData,
-        items: [{
-          ...orderData.items[0],
-          name: orderData.items[0].title,
-          price: orderData.items[0].unit_price
-        }]
-      });
-      setShowMercadoPago(true);
-    } catch (err) {
-      alert("Erro ao processar pedido. Verifique os dados.");
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Erro ao gerar Pix");
+        }
+
+        const data = await response.json();
+
+        // 2. Save it to Firestore from frontend based on new rules (allow create: if true)
+        try {
+          await createOrder({
+            id: orderId,
+            total: totalOrder,
+            items: [{
+              id: selectedProduct.id,
+              title: selectedProduct.name,
+              quantity: quantity,
+              unit_price: selectedProduct.price,
+              flavors: selectedFlavors
+            }],
+            paymentMethod: "pix",
+            status: "pending",
+            paymentId: String(data.id),
+            pixQrCode: data.qr_code,
+            pixQrCodeBase64: data.qr_code_base64
+          });
+        } catch (fsError: any) {
+          console.error("Firestore Save Error:", fsError);
+          if (fsError.message?.includes("PERMISSION_DENIED") || fsError.message?.includes("insufficient permissions")) {
+            throw new Error("Erro de permissão no Firebase. Verifique as regras do Firestore para a coleção orders.");
+          }
+          throw fsError;
+        }
+
+        setPixData({
+          qr_code: data.qr_code,
+          qr_code_base64: data.qr_code_base64,
+          external_reference: data.external_reference
+        });
+        setShowPix(true);
+      } else {
+        setShowMercadoPago(true);
+      }
+    } catch (err: any) {
+      alert(err.message || "Erro ao processar pedido. Verifique os dados.");
     } finally {
       setBuying(false);
     }
@@ -191,9 +244,11 @@ export default function Products() {
 
   const closeModals = () => {
     setSelectedProduct(null);
+    setShowPix(false);
     setShowMercadoPago(false);
     setPurchaseSuccess(false);
     setAddress('');
+    setPixData(null);
   };
 
   return (
@@ -285,7 +340,7 @@ export default function Products() {
                         className="w-full bg-white text-black py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-brand-accent hover:text-white transition-colors"
                       >
                         <ShoppingCart size={18} />
-                        Comprar Agora
+                        Reservar Agora
                       </button>
                     </div>
                   </div>
@@ -335,10 +390,10 @@ export default function Products() {
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className={`relative bg-brand-dark border border-white/10 w-full ${showMercadoPago ? 'max-w-md' : 'max-w-lg'} rounded-[32px] overflow-hidden shadow-2xl flex flex-col`}
+              className={`relative bg-brand-dark border border-white/10 w-full ${showPix || showMercadoPago ? 'max-w-md' : 'max-w-lg'} rounded-[32px] overflow-hidden shadow-2xl flex flex-col`}
             >
-              <div className={showMercadoPago ? "" : "p-8"}>
-                {!(showMercadoPago) && (
+              <div className={showPix || showMercadoPago ? "" : "p-8"}>
+                {!(showPix || showMercadoPago) && (
                   <button 
                     onClick={closeModals}
                     className="absolute top-6 right-6 text-white/50 hover:text-white z-20"
@@ -347,7 +402,16 @@ export default function Products() {
                   </button>
                 )}
 
-                {showMercadoPago ? (
+                {showPix ? (
+                  <PixCheckout 
+                    total={(selectedProduct.price * quantity) + 10}
+                    customerName="Cliente"
+                    qrCode={pixData?.qr_code}
+                    qrCodeBase64={pixData?.qr_code_base64}
+                    orderId={pixData?.external_reference}
+                    onClose={closeModals}
+                  />
+                ) : showMercadoPago ? (
                   <MercadoPagoCheckout 
                     total={(selectedProduct.price * quantity) + 10}
                     items={[{
@@ -363,12 +427,18 @@ export default function Products() {
                     <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
                       <CheckCircle2 className="text-white w-10 h-10" />
                     </div>
-                    <h3 className="text-2xl font-bold mb-2">Pedido Realizado!</h3>
-                    <p className="text-white/50">Seu pedido foi registrado. Entraremos em contato.</p>
+                    <h3 className="text-2xl font-bold mb-2">Pedido Recebido!</h3>
+                    <p className="text-white/50 mb-8">Nossa equipe entrará em contato via WhatsApp para finalizar o pagamento e entrega.</p>
+                    <button 
+                      onClick={closeModals}
+                      className="w-full bg-white text-black py-4 rounded-2xl font-bold hover:bg-brand-accent hover:text-white transition-colors"
+                    >
+                      Voltar ao Catálogo
+                    </button>
                   </div>
                 ) : (
                   <>
-                    <h3 className="text-2xl font-bold mb-6">Finalizar Compra</h3>
+                    <h3 className="text-2xl font-bold mb-6">Reservar Produto</h3>
                     <div className="flex gap-4 mb-8 p-4 bg-white/5 rounded-2xl">
                       <ImageCarousel 
                         images={selectedProduct.images?.length > 0 ? selectedProduct.images : [selectedProduct.image]} 
@@ -426,10 +496,32 @@ export default function Products() {
                       )}
 
                       <div className="space-y-4">
-                        <label className="block text-sm font-medium text-white/50 mb-2">Forma de Pagamento</label>
-                        <div className="p-4 rounded-2xl border bg-brand-accent/20 border-brand-accent text-white flex flex-col items-center gap-2">
-                          <CreditCard size={20} />
-                          <span className="text-[10px] font-black uppercase tracking-widest">Cartão de Crédito / Mercado Pago</span>
+                        <label className="block text-sm font-medium text-white/50 mb-2 font-black uppercase tracking-widest text-[10px]">Forma de Pagamento</label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('pix')}
+                            className={`p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${
+                              paymentMethod === 'pix' 
+                                ? 'bg-brand-accent/20 border-brand-accent text-white' 
+                                : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'
+                            }`}
+                          >
+                            <QrCode size={20} />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Pix Confirm. Auto</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('mercadopago')}
+                            className={`p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${
+                              paymentMethod === 'mercadopago' 
+                                ? 'bg-brand-accent/20 border-brand-accent text-white' 
+                                : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'
+                            }`}
+                          >
+                            <CreditCard size={20} />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Cartão / MP</span>
+                          </button>
                         </div>
                       </div>
 
@@ -454,7 +546,7 @@ export default function Products() {
                           <span>R$ 10,00</span>
                         </div>
                         <div className="pt-2 border-t border-white/5 flex justify-between font-bold text-lg">
-                          <span>Total</span>
+                          <span>Estimativa Total</span>
                           <span className="text-brand-accent text-2xl">R$ {((selectedProduct.price * quantity) + 10).toFixed(2)}</span>
                         </div>
                       </div>
@@ -464,8 +556,11 @@ export default function Products() {
                         disabled={buying}
                         className="w-full bg-brand-accent hover:bg-brand-accent/90 py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all shadow-lg shadow-brand-accent/20 disabled:opacity-50"
                       >
-                        {buying ? <Loader2 className="animate-spin" /> : "Confirmar Pedido"}
+                        {buying ? <Loader2 className="animate-spin" /> : (paymentMethod === 'pix' ? "Gerar QR Code Pix" : "Continuar para Pagamento")}
                       </button>
+                      <p className="text-[10px] text-center text-white/20 uppercase tracking-widest font-bold">
+                        {paymentMethod === 'pix' ? 'Pagamento processado via Mercado Pago com detecção automática' : 'O pagamento será processado em ambiente seguro'}
+                      </p>
                     </form>
                   </>
                 )}

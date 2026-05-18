@@ -10,12 +10,16 @@ import Differentials from './components/Differentials';
 import About from './components/About';
 import CTA from './components/CTA';
 import WhatsAppButton from './components/WhatsAppButton';
+import InstagramButton from './components/InstagramButton';
 import { useEffect } from 'react';
-import { testConnection } from './lib/firebase';
+import { analytics } from './lib/firebase';
 
 export default function App() {
   useEffect(() => {
-    testConnection();
+    // Initialize analytics
+    analytics.then(a => {
+      if (a) console.log("Analytics initialized");
+    });
   }, []);
 
   return (
@@ -43,6 +47,7 @@ export default function App() {
       </footer>
 
       <WhatsAppButton />
+      <InstagramButton />
     </div>
   );
 }
