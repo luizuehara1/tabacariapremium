@@ -390,15 +390,15 @@ export default function Products() {
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className={`relative bg-brand-dark border border-white/10 w-full ${showPix || showMercadoPago ? 'max-w-md' : 'max-w-lg'} rounded-[32px] overflow-hidden shadow-2xl flex flex-col`}
+              className={`relative bg-brand-dark border border-white/10 w-full ${showPix || showMercadoPago ? 'max-w-md' : 'max-w-lg'} rounded-[32px] overflow-hidden shadow-2xl flex flex-col max-h-[90vh] md:max-h-none`}
             >
-              <div className={showPix || showMercadoPago ? "" : "p-8"}>
+              <div className={`overflow-y-auto custom-scrollbar flex-1 ${showPix || showMercadoPago ? "" : "p-6 md:p-8"}`}>
                 {!(showPix || showMercadoPago) && (
                   <button 
                     onClick={closeModals}
-                    className="absolute top-6 right-6 text-white/50 hover:text-white z-20"
+                    className="absolute top-4 right-4 md:top-6 md:right-6 text-white/50 hover:text-white z-20 p-2 bg-black/20 rounded-full backdrop-blur-sm"
                   >
-                    <X />
+                    <X size={20} />
                   </button>
                 )}
 
