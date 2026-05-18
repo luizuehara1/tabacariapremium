@@ -4,27 +4,10 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 import dotenv from 'dotenv';
-import admin from 'firebase-admin';
-import { getFirestore } from 'firebase-admin/firestore';
 import fs from 'fs';
 
 dotenv.config();
 
-// Initialize Firebase Admin
-const firebaseConfig = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'firebase-applet-config.json'), 'utf-8'));
-
-if (!admin.apps.length) {
-  try {
-    admin.initializeApp({
-      projectId: firebaseConfig.projectId
-    });
-    console.log("Firebase Admin initialized successfully. Project ID:", admin.app().options.projectId);
-  } catch (initError) {
-    console.error("Firebase Admin initialization error:", initError);
-  }
-}
-
-const db = getFirestore(firebaseConfig.firestoreDatabaseId);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -34,8 +17,13 @@ async function startServer() {
 
   app.use(express.json());
 
+  const mpToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+  if (!mpToken) {
+    console.warn("⚠️ AVISO: MERCADO_PAGO_ACCESS_TOKEN não configurado. Pagamentos podem falhar.");
+  }
+
   const client = new MercadoPagoConfig({ 
-    accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN || "APP_USR-5439602477800429-051811-ae92db916ab15d21c093fa83cf0941a9-2615299865" 
+    accessToken: mpToken || "" 
   });
 
   // API Routes
@@ -153,17 +141,9 @@ async function startServer() {
           console.log(`✅ SUCCESS: Payment approved for order ${externalReference}`);
           
           if (externalReference) {
-            try {
-              await db.collection('orders').doc(externalReference).update({
-                status: 'approved',
-                paidAt: admin.firestore.FieldValue.serverTimestamp(),
-                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-                payment_id: paymentId
-              });
-              console.log(`Order ${externalReference} marked as PAID (approved)`);
-            } catch (fsError) {
-              console.error(`Error updating order ${externalReference} in Firestore:`, fsError);
-            }
+            console.log(`Order ${externalReference} should be marked as PAID (approved)`);
+            // Note: Cloud Run container doesn't have permissions to write to user's Firebase project without a service account key.
+            // Automatic status updates via webhook are disabled. User should update via Admin Panel.
           }
         }
       } catch (error) {
