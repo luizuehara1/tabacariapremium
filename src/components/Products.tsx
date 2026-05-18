@@ -192,12 +192,20 @@ export default function Products() {
           })
         });
 
-        const data = await response.json();
+        const rawText = await response.text();
+        let data;
+        try {
+          data = JSON.parse(rawText);
+        } catch (parseError) {
+          console.error("Resposta não JSON da rota /api/create-pix:", rawText);
+          throw new Error("A rota /api/create-pix não retornou JSON. Verifique se o servidor está funcionando corretamente.");
+        }
+
         console.log("Resposta /api/create-pix:", data);
 
         if (!response.ok) {
           console.error("Erro na API de Pagamento:", data);
-          throw new Error(data.error || "Erro ao gerar Pix no Mercado Pago");
+          throw new Error(data?.error || "Erro ao gerar Pix no Mercado Pago");
         }
         
         if (!data.qrCodeBase64) {

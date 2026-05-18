@@ -111,7 +111,7 @@ async function startServer() {
       console.log("amount recebido:", amount);
       console.log("token mercado pago existe:", !!process.env.MERCADO_PAGO_ACCESS_TOKEN);
 
-      if (!amount || amount <= 0 || isNaN(amount)) {
+      if (!amount || amount <= 0 || Number.isNaN(amount)) {
         console.error("Erro: Valor inválido para PIX:", rawAmount);
         return res.status(400).json({ 
           error: "Valor inválido para gerar PIX.",
@@ -120,7 +120,9 @@ async function startServer() {
       }
 
       if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
-        return res.status(500).json({ error: "MERCADO_PAGO_ACCESS_TOKEN não configurado no servidor." });
+        return res.status(500).json({ 
+          error: "MERCADO_PAGO_ACCESS_TOKEN não configurado no servidor." 
+        });
       }
 
       // Dinamicamente resolve a URL de notificação
@@ -185,10 +187,11 @@ async function startServer() {
         qrCodeBase64
       });
     } catch (error: any) {
-      console.error("Erro fatal ao criar pagamento Pix:", error);
-      res.status(500).json({ 
-        error: error.message || "Erro interno ao gerar Pix",
-        details: error.cause || null
+      console.error("Erro ao criar PIX:", error);
+
+      return res.status(500).json({
+        error: "Erro interno ao criar PIX.",
+        details: String(error?.message || error)
       });
     }
   });
