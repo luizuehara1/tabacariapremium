@@ -36,7 +36,7 @@ export default function Differentials() {
               whileInView={{ opacity: 1 }}
               transition={{ delay: index * 0.1 }}
               viewport={{ once: true }}
-              className="bg-brand-black p-12 hover:bg-brand-card/50 transition-colors group"
+              className="bg-brand-black p-8 md:p-12 hover:bg-brand-card/50 transition-colors group"
             >
               <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-brand-accent group-hover:text-white transition-all duration-500">
                 <feature.icon className="w-6 h-6" />

@@ -160,9 +160,11 @@ export default function Products() {
       return;
     }
 
-    const totalOrder = (selectedProduct.price * quantity) + 10;
-    if (totalOrder <= 0) {
-      alert("Valor do pedido inválido.");
+    const totalValue = (selectedProduct.price * quantity) + 10;
+    const amount = Number(totalValue.toFixed(2));
+
+    if (isNaN(amount) || amount <= 0) {
+      alert("Valor do pedido inválido para gerar PIX.");
       return;
     }
 
@@ -171,40 +173,42 @@ export default function Products() {
       if (paymentMethod === 'pix') {
         const orderId = `ORDER-${Date.now()}`;
         
+        console.log("Iniciando requisição PIX para valor:", amount);
+
         // 1. First attempt to create the payment in MP
-        const response = await fetch('/api/create-pix-payment', {
+        console.log("Iniciando requisição PIX para valor:", amount);
+
+        const response = await fetch('/api/create-pix', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            amount: totalOrder,
+            amount: amount,
             description: `${quantity}x ${selectedProduct.name}`,
             orderId: orderId,
             payer: {
-              email: "contato@vaporstreet.com.br",
+              email: "cliente@email.com",
               first_name: "Cliente"
-            },
-            items: [{
-              id: selectedProduct.id,
-              title: selectedProduct.name,
-              quantity: quantity,
-              unit_price: selectedProduct.price,
-              flavors: selectedFlavors
-            }]
+            }
           })
         });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Erro ao gerar Pix");
-        }
-
         const data = await response.json();
+        console.log("Resposta /api/create-pix:", data);
+
+        if (!response.ok) {
+          console.error("Erro na API de Pagamento:", data);
+          throw new Error(data.error || "Erro ao gerar Pix no Mercado Pago");
+        }
+        
+        if (!data.qrCodeBase64) {
+          throw new Error("Mercado Pago não retornou QR Code PIX.");
+        }
 
         // 2. Save it to Firestore from frontend based on new rules (allow create: if true)
         try {
           await createOrder({
             id: orderId,
-            total: totalOrder,
+            total: amount,
             items: [{
               id: selectedProduct.id,
               title: selectedProduct.name,
@@ -214,9 +218,10 @@ export default function Products() {
             }],
             paymentMethod: "pix",
             status: "pending",
-            paymentId: String(data.id),
-            pixQrCode: data.qr_code,
-            pixQrCodeBase64: data.qr_code_base64
+            paymentId: String(data.paymentId),
+            pixQrCode: data.qrCode,
+            pixQrCodeBase64: data.qrCodeBase64,
+            address: address // Include address in Firestore
           });
         } catch (fsError: any) {
           console.error("Firestore Save Error:", fsError);
@@ -227,16 +232,17 @@ export default function Products() {
         }
 
         setPixData({
-          qr_code: data.qr_code,
-          qr_code_base64: data.qr_code_base64,
-          external_reference: data.external_reference
+          qr_code: data.qrCode,
+          qr_code_base64: data.qrCodeBase64,
+          external_reference: orderId
         });
         setShowPix(true);
       } else {
         setShowMercadoPago(true);
       }
     } catch (err: any) {
-      alert(err.message || "Erro ao processar pedido. Verifique os dados.");
+      console.error("Falha no checkout:", err);
+      alert(err.message || "Erro ao processar pedido. Verifique sua conexão.");
     } finally {
       setBuying(false);
     }
@@ -300,7 +306,7 @@ export default function Products() {
             <span className="text-white/20 tracking-widest uppercase font-bold text-xs">Sincronizando Inventário...</span>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {products.length === 0 && (
               <div className="col-span-full text-center py-32 glass-card rounded-[48px] border-dashed border-white/10">
                 <Package size={48} className="mx-auto mb-6 text-white/10" />
@@ -334,13 +340,13 @@ export default function Products() {
                       </div>
                     )}
 
-                    <div className="absolute bottom-6 left-6 right-6 translate-y-8 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-500">
+                    <div className="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-6 md:right-6 md:translate-y-8 md:opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 z-20">
                       <button 
                         onClick={() => setSelectedProduct(product)}
-                        className="w-full bg-white text-black py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-brand-accent hover:text-white transition-colors"
+                        className="w-full bg-white text-black py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-accent hover:text-white transition-all shadow-2xl active:scale-95"
                       >
-                        <ShoppingCart size={18} />
-                        Reservar Agora
+                        <ShoppingCart size={16} />
+                        Comprar
                       </button>
                     </div>
                   </div>

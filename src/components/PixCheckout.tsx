@@ -44,16 +44,21 @@ export default function PixCheckout({ total, customerName, qrCode, qrCodeBase64,
           <span className="text-lg md:text-xl font-black text-brand-accent">R$ {total.toFixed(2)}</span>
         </div>
 
-        <div className="bg-white p-4 md:p-6 rounded-2xl mb-4 flex items-center justify-center shadow-2xl">
+        <div className="bg-white p-4 md:p-6 rounded-2xl mb-4 flex items-center justify-center shadow-2xl overflow-hidden min-h-[160px]">
           {qrCodeBase64 ? (
             <img 
-              src={`data:image/jpeg;base64,${qrCodeBase64}`} 
+              src={`data:image/png;base64,${qrCodeBase64}`} 
               alt="QR Code Pix" 
-              className="w-40 h-40 md:w-48 md:h-48"
+              className="w-40 h-40 md:w-48 md:h-48 object-contain"
+              onError={(e) => {
+                console.error("Erro ao carregar imagem do QR Code");
+                (e.target as HTMLImageElement).src = 'https://placehold.co/200x200?text=Erro+QR+Code';
+              }}
             />
           ) : (
-            <div className="w-40 h-40 md:w-48 md:h-48 flex items-center justify-center">
-              <Loader2 className="animate-spin text-brand-black/20" size={40} />
+            <div className="w-40 h-40 md:w-48 md:h-48 flex flex-col items-center justify-center gap-2">
+              <Loader2 className="animate-spin text-brand-black/20" size={32} />
+              <span className="text-[10px] text-brand-black/40 font-bold uppercase tracking-tight">Gerando código...</span>
             </div>
           )}
         </div>

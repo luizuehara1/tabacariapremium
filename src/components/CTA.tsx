@@ -14,7 +14,7 @@ export default function CTA() {
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
-          className="bg-brand-dark border border-white/10 p-12 lg:p-20 rounded-[48px] text-center relative overflow-hidden shadow-2xl"
+          className="bg-brand-dark border border-white/10 p-10 md:p-12 lg:p-20 rounded-[40px] md:rounded-[48px] text-center relative overflow-hidden shadow-2xl"
         >
           {/* Decorations */}
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand-accent to-brand-neon" />

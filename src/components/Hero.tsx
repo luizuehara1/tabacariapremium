@@ -48,7 +48,7 @@ export default function Hero() {
                 Qualidade de Elite
               </div>
               
-              <h1 className="text-6xl lg:text-[8rem] font-black tracking-[-0.04em] leading-[0.9] mb-10 text-gradient">
+              <h1 className="text-5xl sm:text-6xl lg:text-[8rem] font-black tracking-[-0.04em] leading-[0.9] mb-10 text-gradient">
                 HIGH<br/>VAPOR<br/><span className="accent-gradient">STREET</span>
               </h1>
               
