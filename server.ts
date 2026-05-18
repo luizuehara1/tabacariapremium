@@ -64,6 +64,13 @@ async function startServer() {
   });
 
   // API Routes
+  app.get("/api/health", (req, res) => {
+    return res.status(200).json({
+      ok: true,
+      message: "API funcionando no servidor"
+    });
+  });
+
   app.post("/api/create-preference", async (req, res) => {
     try {
       console.log("Iniciando criação de preferência Mercado Pago...");
@@ -101,7 +108,13 @@ async function startServer() {
   });
 
   // RENAMED TO /api/create-pix
-  app.post("/api/create-pix", async (req, res) => {
+  app.all("/api/create-pix", async (req, res) => {
+    if (req.method !== "POST") {
+      return res.status(405).json({
+        error: "Método não permitido. Use POST."
+      });
+    }
+
     try {
       const { amount: rawAmount, description, orderId, payer } = req.body;
       
